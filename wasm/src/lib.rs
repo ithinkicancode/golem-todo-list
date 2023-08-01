@@ -1,7 +1,12 @@
 use bindings::{export, exports::golem::todos::api::*};
 use lib::{core::AppResult, todos};
 
-// Unfortunately, I cannot implement the `From` trait because I own neither the wit-generated crate (in the target directory) nor the trait (Rust's orphan rule). I cannot use the `newtype` pattern as a workaround either because the wit-generated structs/enums are my APIs.
+/*
+ Unfortunately, I cannot implement the `From` trait because I own neither the
+ wit-generated crate (in the target directory) nor the trait (Rust's orphan rule).
+ I cannot use the `newtype` pattern as a workaround either because the wit-generated
+ structs/enums are my APIs.
+*/
 
 fn priority_from_incoming(p: Priority) -> todos::Priority {
     match p {
@@ -44,42 +49,42 @@ fn query_sort_from_incoming(sort: QuerySort) -> todos::QuerySort {
 }
 
 fn new_todo_from_incoming(item: NewTodo) -> todos::NewTodo {
-    todos::NewTodo {
-        title: item.title,
-        priority: priority_from_incoming(item.priority),
-        deadline: item.deadline,
-    }
+    todos::NewTodo::builder()
+        .title(item.title)
+        .priority(priority_from_incoming(item.priority))
+        .deadline(item.deadline)
+        .build()
 }
 
 fn update_todo_from_incoming(item: UpdateTodo) -> todos::UpdateTodo {
-    todos::UpdateTodo {
-        title: item.title,
-        priority: item.priority.map(priority_from_incoming),
-        status: item.status.map(status_from_incoming),
-        deadline: item.deadline,
-    }
+    todos::UpdateTodo::builder()
+        .title(item.title)
+        .priority(item.priority.map(priority_from_incoming))
+        .status(item.status.map(status_from_incoming))
+        .deadline(item.deadline)
+        .build()
 }
 
 fn query_from_incoming(query: Query) -> todos::Query {
-    todos::Query {
-        keyword: query.keyword,
-        priority: query.priority.map(priority_from_incoming),
-        status: query.status.map(status_from_incoming),
-        deadline: query.deadline,
-        sort: query.sort.map(query_sort_from_incoming),
-        limit: query.limit,
-    }
+    todos::Query::builder()
+        .keyword(query.keyword)
+        .priority(query.priority.map(priority_from_incoming))
+        .status(query.status.map(status_from_incoming))
+        .deadline(query.deadline)
+        .sort(query.sort.map(query_sort_from_incoming))
+        .limit(query.limit)
+        .build()
 }
 
 fn todo_for_outgoing(t: todos::Todo) -> Todo {
     Todo {
-        id: t.id,
-        title: t.title,
-        priority: priority_for_outgoing(t.priority),
-        deadline: t.deadline,
-        status: status_for_outgoing(t.status),
-        created_timestamp: t.created_timestamp,
-        updated_timestamp: t.updated_timestamp,
+        id: t.id().to_string(),
+        title: t.title().to_string(),
+        priority: priority_for_outgoing(t.priority()),
+        deadline: t.deadline(),
+        status: status_for_outgoing(t.status()),
+        created_timestamp: t.created_timestamp(),
+        updated_timestamp: t.updated_timestamp(),
     }
 }
 

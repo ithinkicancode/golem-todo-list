@@ -2,11 +2,13 @@ use crate::core::{
     unix_time_from, AppResult,
 };
 use chrono::Utc;
+use getset::{CopyGetters, Getters};
 use once_cell::sync::Lazy;
 use std::{
     cmp, collections::HashMap,
     num::TryFromIntError,
 };
+use typed_builder::TypedBuilder;
 use uuid::Uuid;
 
 const QUERY_DEFAULT_LIMIT: u32 = 10;
@@ -56,15 +58,14 @@ pub enum QuerySort {
     Status,
 }
 
-// TODO: use builder instead of pub fields
-#[derive(Clone)]
+#[derive(Clone, TypedBuilder)]
 pub struct Query {
-    pub keyword: Option<String>,
-    pub priority: Option<Priority>,
-    pub status: Option<Status>,
-    pub deadline: Option<String>,
-    pub sort: Option<QuerySort>,
-    pub limit: Option<u32>,
+    keyword: Option<String>,
+    priority: Option<Priority>,
+    status: Option<Status>,
+    deadline: Option<String>,
+    sort: Option<QuerySort>,
+    limit: Option<u32>,
 }
 impl Query {
     fn validate_limit(
@@ -121,11 +122,11 @@ impl Query {
     }
 }
 
-// TODO: use builder instead of pub fields
+#[derive(TypedBuilder)]
 pub struct NewTodo {
-    pub title: String,
-    pub priority: Priority,
-    pub deadline: Option<String>,
+    title: String,
+    priority: Priority,
+    deadline: Option<String>,
 }
 impl NewTodo {
     fn validate_title(
@@ -144,12 +145,12 @@ impl NewTodo {
     }
 }
 
-// TODO: use builder instead of pub fields
+#[derive(TypedBuilder)]
 pub struct UpdateTodo {
-    pub title: Option<String>,
-    pub priority: Option<Priority>,
-    pub status: Option<Status>,
-    pub deadline: Option<String>,
+    title: Option<String>,
+    priority: Option<Priority>,
+    status: Option<Status>,
+    deadline: Option<String>,
 }
 impl UpdateTodo {
     fn change_is_present(
@@ -162,15 +163,24 @@ impl UpdateTodo {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(
+    Clone, Debug, Getters, CopyGetters,
+)]
 pub struct Todo {
-    pub id: String,
-    pub title: String,
-    pub priority: Priority,
-    pub status: Status,
-    pub created_timestamp: i64,
-    pub updated_timestamp: i64,
-    pub deadline: Option<i64>,
+    #[getset(get = "pub")]
+    id: String,
+    #[getset(get = "pub")]
+    title: String,
+    #[getset(get_copy = "pub")]
+    priority: Priority,
+    #[getset(get_copy = "pub")]
+    status: Status,
+    #[getset(get_copy = "pub")]
+    created_timestamp: i64,
+    #[getset(get_copy = "pub")]
+    updated_timestamp: i64,
+    #[getset(get_copy = "pub")]
+    deadline: Option<i64>,
 }
 
 struct AppState {
@@ -204,6 +214,10 @@ fn u64_from(
         }
     )
 }
+
+// fn unix_time_now() -> i64 {
+//     Utc::now().timestamp()
+// }
 
 pub fn add(
     item: NewTodo,
