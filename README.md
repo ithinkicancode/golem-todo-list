@@ -32,7 +32,7 @@ Then upload the Wasm binary and run it on Golem Cloud (skip to step 6 if you hav
   alias todos='golem instance invoke-and-await --instance-name todos-inst-1 --component-name todolist --function $*'
   ```
 
-9. Now let's organzie ✅
+9. Now let's get organized! ✅
 
   * Run the `count` command to verify that our todo list is currently empty.
 
@@ -40,7 +40,7 @@ Then upload the Wasm binary and run it on Golem Cloud (skip to step 6 if you hav
   todos golem:todos/api/count --parameters '[]'
   ```
 
-  * Let's add some todo's! We will see a payload of newly-created todo item returning from each call.
+  * Let's add some todo's using `add` command. We will see a payload of newly-created todo item returning from each call.
 
   ```bash
   todos golem:todos/api/add --parameters '[{"title": "todo #1", "priority": "low", "deadline": null}]'
