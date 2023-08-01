@@ -354,7 +354,7 @@ impl TodoList {
                 QuerySort::Priority,
             ) => {
                 result.sort_by_key(
-                    |t: &Todo| {
+                    |t| {
                         cmp::Reverse(
                             t.priority,
                         )
@@ -394,13 +394,12 @@ impl TodoList {
         &self,
         id: String,
     ) -> AppResult<Todo> {
-        if let Some(item) =
-            self.0.get(&id)
-        {
-            Ok(item.clone())
-        } else {
-            Err(item_not_found(&id))
-        }
+        self.0
+            .get(&id)
+            .cloned()
+            .ok_or_else(|| {
+                item_not_found(&id)
+            })
     }
 
     pub fn count(
