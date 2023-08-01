@@ -398,10 +398,10 @@ impl TodoList {
 
     pub fn get(
         &self,
-        id: String,
+        id: &str,
     ) -> AppResult<Todo> {
         self.0
-            .get(&id)
+            .get(id)
             .cloned()
             .ok_or_else(|| {
                 item_not_found(&id)
@@ -416,10 +416,10 @@ impl TodoList {
 
     pub fn delete(
         &mut self,
-        id: String,
+        id: &str,
     ) -> AppResult<()> {
-        if self.0.contains_key(&id) {
-            self.0.remove(&id);
+        if self.0.contains_key(id) {
+            self.0.remove(id);
 
             Ok(())
         } else {
@@ -469,17 +469,6 @@ mod tests {
     }
 
     #[test]
-    fn todolist_count_should_be_0_when_there_is_no_todos(
-    ) {
-        let todos = TodoList::new();
-
-        assert_eq!(
-            todos.count().unwrap(),
-            0
-        );
-    }
-
-    #[test]
     fn todolist_search_should_return_empty_vec_when_there_is_no_todos(
     ) {
         let todos = TodoList::new();
@@ -488,6 +477,30 @@ mod tests {
             .search(Query::empty())
             .unwrap()
             .is_empty());
+    }
+
+    #[test]
+    fn todolist_get_should_fail_when_there_is_no_todos(
+    ) {
+        let todos = TodoList::new();
+
+        let id = "not-exist";
+
+        assert_eq!(
+            todos.get(id).unwrap_err(),
+            item_not_found(id)
+        );
+    }
+
+    #[test]
+    fn todolist_count_should_be_0_when_there_is_no_todos(
+    ) {
+        let todos = TodoList::new();
+
+        assert_eq!(
+            todos.count().unwrap(),
+            0
+        );
     }
 
     #[test]

@@ -131,7 +131,7 @@ impl Api for Todos {
 
     fn get(id: String) -> AppResult<Todo> {
         with_app_state(|AppState(todos)| {
-            let result = todos.get(id)?;
+            let result = todos.get(&id)?;
 
             Ok(todo_for_outgoing(result))
         })
@@ -142,7 +142,7 @@ impl Api for Todos {
     }
 
     fn delete(id: String) -> AppResult<()> {
-        with_app_state(|AppState(todos)| todos.delete(id))
+        with_app_state(|AppState(todos)| todos.delete(&id))
     }
 
     fn delete_done_items() -> u64 {
