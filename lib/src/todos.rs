@@ -215,10 +215,6 @@ fn u64_from(
     )
 }
 
-// fn unix_time_now() -> i64 {
-//     Utc::now().timestamp()
-// }
-
 pub fn add(
     item: NewTodo,
 ) -> AppResult<Todo> {
