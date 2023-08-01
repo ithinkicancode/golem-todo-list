@@ -1,0 +1,75 @@
+package golem:todos
+
+interface api {
+
+  enum status {
+    backlog,
+    in-progress,
+    done,
+  }
+
+  enum priority {
+    low,
+    medium,
+    high
+  }
+
+  enum query-sort {
+    priority,
+    status,
+    deadline,
+  }
+
+  record new-todo {
+    title: string,
+    priority: priority,
+    deadline: option<string>,
+  }
+
+  record update-todo {
+    title: option<string>,
+    priority: option<priority>,
+    status: option<status>,
+    deadline: option<string>,
+  }
+
+  record todo {
+    id: string,
+    title: string,
+    priority: priority,
+    status: status,
+    created-timestamp: s64,
+    updated-timestamp: s64,
+    deadline: option<s64>,
+  }
+
+  record query {
+    keyword: option<string>,
+    priority: option<priority>,
+    status: option<status>,
+    deadline: option<string>,
+    sort: option<query-sort>,
+    limit: option<u32>,
+  }
+
+  add: func(item: new-todo) -> result<todo, string>
+
+  update: func(id: string, change: update-todo) -> result<todo, string>
+
+  search: func(query: query) -> result<list<todo>, string>
+
+  get: func(id: string) -> result<todo, string>
+
+  count: func() -> result<u64, string>
+
+  delete: func(id: string) -> result<_, string>
+
+  delete-done-items: func() -> u64
+
+  delete-all: func() -> result<u64, string>
+
+}
+
+world todos {
+  export api
+}
