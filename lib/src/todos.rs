@@ -404,7 +404,7 @@ impl TodoList {
             .get(id)
             .cloned()
             .ok_or_else(|| {
-                item_not_found(&id)
+                item_not_found(id)
             })
     }
 
@@ -418,13 +418,12 @@ impl TodoList {
         &mut self,
         id: &str,
     ) -> AppResult<()> {
-        if self.0.contains_key(id) {
-            self.0.remove(id);
-
-            Ok(())
-        } else {
-            Err(item_not_found(&id))
-        }
+        self.0
+            .remove(id)
+            .map(|_| ())
+            .ok_or_else(|| {
+                item_not_found(id)
+            })
     }
 
     pub fn delete_done_items(
@@ -500,6 +499,21 @@ mod tests {
         assert_eq!(
             todos.count().unwrap(),
             0
+        );
+    }
+
+    #[test]
+    fn todolist_delete_should_fail_when_there_is_no_todos(
+    ) {
+        let mut todos = TodoList::new();
+
+        let id = "not-exist";
+
+        assert_eq!(
+            todos
+                .delete(id)
+                .unwrap_err(),
+            item_not_found(id)
         );
     }
 
