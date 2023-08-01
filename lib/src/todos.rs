@@ -57,7 +57,9 @@ pub enum QuerySort {
     Status,
 }
 
-#[derive(Clone, TypedBuilder)]
+#[derive(
+    Clone, Default, TypedBuilder,
+)]
 pub struct Query {
     keyword: Option<String>,
     priority: Option<Priority>,
@@ -204,6 +206,10 @@ pub struct TodoList(
     HashMap<String, Todo>,
 );
 impl TodoList {
+    pub fn new() -> Self {
+        Default::default()
+    }
+
     pub fn add(
         &mut self,
         item: NewTodo,
@@ -455,4 +461,54 @@ impl TodoList {
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
+
+    impl Query {
+        fn empty() -> Self {
+            Default::default()
+        }
+    }
+
+    #[test]
+    fn todolist_count_should_be_0_when_there_is_no_todos(
+    ) {
+        let todos = TodoList::new();
+
+        assert_eq!(
+            todos.count().unwrap(),
+            0
+        );
+    }
+
+    #[test]
+    fn todolist_search_should_return_empty_vec_when_there_is_no_todos(
+    ) {
+        let todos = TodoList::new();
+
+        assert!(todos
+            .search(Query::empty())
+            .unwrap()
+            .is_empty());
+    }
+
+    #[test]
+    fn todolist_delete_done_items_should_return_0_when_there_is_no_todos(
+    ) {
+        let mut todos = TodoList::new();
+
+        assert_eq!(
+            todos.delete_done_items(),
+            0
+        );
+    }
+
+    #[test]
+    fn todolist_delete_all_should_return_0_when_there_is_no_todos(
+    ) {
+        let mut todos = TodoList::new();
+
+        assert_eq!(
+            todos.delete_all().unwrap(),
+            0
+        );
+    }
 }
