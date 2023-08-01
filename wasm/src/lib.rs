@@ -1,5 +1,9 @@
 use bindings::{export, exports::golem::todos::api::*};
-use lib::{core::AppResult, todos};
+use lib::{
+    core::AppResult,
+    todos::{self, TodoList},
+};
+use once_cell::sync::Lazy;
 
 /*
  Unfortunately, I cannot implement the `From` trait because I own neither the
@@ -88,49 +92,65 @@ fn todo_for_outgoing(t: todos::Todo) -> Todo {
     }
 }
 
+struct AppState(TodoList);
+
+static mut APP_STATE: Lazy<AppState> = Lazy::new(|| AppState(TodoList::new()));
+
+fn with_app_state<T>(f: impl FnOnce(&mut AppState) -> T) -> T {
+    unsafe { f(&mut APP_STATE) }
+}
+
 struct Todos;
 
 impl Api for Todos {
     fn add(item: NewTodo) -> AppResult<Todo> {
-        let result = todos::add(new_todo_from_incoming(item))?;
+        with_app_state(|AppState(todos)| {
+            let result = todos.add(new_todo_from_incoming(item))?;
 
-        Ok(todo_for_outgoing(result))
+            Ok(todo_for_outgoing(result))
+        })
     }
 
     fn update(id: String, change: UpdateTodo) -> AppResult<Todo> {
-        let result = todos::update(id, update_todo_from_incoming(change))?;
+        with_app_state(|AppState(todos)| {
+            let result = todos.update(id, update_todo_from_incoming(change))?;
 
-        Ok(todo_for_outgoing(result))
+            Ok(todo_for_outgoing(result))
+        })
     }
 
     fn search(query: Query) -> AppResult<Vec<Todo>> {
-        let found = todos::search(query_from_incoming(query))?;
+        with_app_state(|AppState(todos)| {
+            let found = todos.search(query_from_incoming(query))?;
 
-        let result = found.into_iter().map(todo_for_outgoing).collect();
+            let result = found.into_iter().map(todo_for_outgoing).collect();
 
-        Ok(result)
+            Ok(result)
+        })
     }
 
     fn get(id: String) -> AppResult<Todo> {
-        let result = todos::get(id)?;
+        with_app_state(|AppState(todos)| {
+            let result = todos.get(id)?;
 
-        Ok(todo_for_outgoing(result))
+            Ok(todo_for_outgoing(result))
+        })
     }
 
     fn count() -> AppResult<u64> {
-        todos::count()
+        with_app_state(|AppState(todos)| todos.count())
     }
 
     fn delete(id: String) -> AppResult<()> {
-        todos::delete(id)
+        with_app_state(|AppState(todos)| todos.delete(id))
     }
 
     fn delete_done_items() -> u64 {
-        todos::delete_done_items()
+        with_app_state(|AppState(todos)| todos.delete_done_items())
     }
 
     fn delete_all() -> AppResult<u64> {
-        todos::delete_all()
+        with_app_state(|AppState(todos)| todos.delete_all())
     }
 }
 export!(Todos);

@@ -3,7 +3,6 @@ use crate::core::{
 };
 use chrono::Utc;
 use getset::{CopyGetters, Getters};
-use once_cell::sync::Lazy;
 use std::{
     cmp, collections::HashMap,
     num::TryFromIntError,
@@ -183,21 +182,6 @@ pub struct Todo {
     deadline: Option<i64>,
 }
 
-struct AppState {
-    items: HashMap<String, Todo>,
-}
-
-static mut APP_STATE: Lazy<AppState> =
-    Lazy::new(|| AppState {
-        items: HashMap::new(),
-    });
-
-fn with_app_state<T>(
-    f: impl FnOnce(&mut AppState) -> T,
-) -> T {
-    unsafe { f(&mut APP_STATE) }
-}
-
 fn item_not_found(id: &str) -> String {
     format!(
         "Item with ID '{}' not found.",
@@ -215,264 +199,261 @@ fn u64_from(
     )
 }
 
-pub fn add(
-    item: NewTodo,
-) -> AppResult<Todo> {
-    let title =
-        item.validate_title()?;
+pub struct TodoList(
+    HashMap<String, Todo>,
+);
 
-    let deadline =
-        unix_time_from(&item.deadline)?;
+impl TodoList {
+    pub fn new() -> Self {
+        Self(HashMap::new())
+    }
 
-    let id = Uuid::new_v4().to_string();
+    pub fn add(
+        &mut self,
+        item: NewTodo,
+    ) -> AppResult<Todo> {
+        let title =
+            item.validate_title()?;
 
-    let now: i64 = unix_time_now!();
+        let deadline = unix_time_from(
+            &item.deadline,
+        )?;
 
-    let item = Todo {
-        id,
-        title: title.to_string(),
-        priority: item.priority,
-        deadline,
-        status: Status::Backlog,
-        created_timestamp: now,
-        updated_timestamp: now,
-    };
+        let id =
+            Uuid::new_v4().to_string();
 
-    let result = item.clone();
+        let now: i64 = unix_time_now!();
 
-    with_app_state(
-        |AppState { items }| {
-            items.insert(
-                item.id.clone(),
-                item,
-            );
-        },
-    );
+        let item = Todo {
+            id,
+            title: title.to_string(),
+            priority: item.priority,
+            deadline,
+            status: Status::Backlog,
+            created_timestamp: now,
+            updated_timestamp: now,
+        };
 
-    Ok(result)
-}
+        let result = item.clone();
 
-pub fn update(
-    id: String,
-    change: UpdateTodo,
-) -> AppResult<Todo> {
-    if change.change_is_present() {
-        let deadline_update =
-            unix_time_from(
-                &change.deadline,
-            )?;
+        self.0.insert(
+            item.id.clone(),
+            item,
+        );
 
-        with_app_state(
-            |AppState { items }| {
-                if let Some(todo) =
-                    items.get_mut(&id)
+        Ok(result)
+    }
+
+    pub fn update(
+        &mut self,
+        id: String,
+        change: UpdateTodo,
+    ) -> AppResult<Todo> {
+        if change.change_is_present() {
+            let deadline_update =
+                unix_time_from(
+                    &change.deadline,
+                )?;
+
+            if let Some(todo) =
+                self.0.get_mut(&id)
+            {
+                let mut modified =
+                    false;
+
+                if let Some(
+                    title_update,
+                ) = change.title
                 {
-                    let mut modified =
-                        false;
+                    let title_update =
+                        title_update
+                            .trim();
 
-                    if let Some(
-                        title_update,
-                    ) = change.title
+                    if !{
+                        title_update
+                            .is_empty()
+                    } && todo.title
+                        != title_update
                     {
-                        let title_update =
-                            title_update
-                                .trim();
-
-                        if !{ title_update.is_empty() } &&
-                            todo.title != title_update
-                        {
-                            todo.title = title_update.to_string();
-                            modified = true;
-                        }
-                    }
-
-                    if let Some(
-                        priority_update,
-                    ) =
-                        change.priority
-                    {
-                        if todo.priority != priority_update {
-                            todo.priority = priority_update;
-                            modified = true;
-                        }
-                    }
-
-                    if let Some(
-                        status_update,
-                    ) = change.status
-                    {
-                        if todo.status != status_update {
-                            todo.status = status_update;
-                            modified = true;
-                        }
-                    }
-
-                    if todo.deadline != deadline_update {
-                        todo.deadline =
-                            deadline_update;
+                        todo.title = title_update.to_string();
                         modified = true;
                     }
-
-                    if modified {
-                        todo.updated_timestamp = unix_time_now!();
-                    }
-
-                    Ok(todo.clone())
-                } else {
-                    Err(item_not_found(
-                        &id,
-                    ))
                 }
-            },
-        )
-    } else {
-        Err("At least one change must be present.".to_string())
-    }
-}
 
-pub fn search(
-    query: Query,
-) -> AppResult<Vec<Todo>> {
-    let deadline = unix_time_from(
-        &query.deadline,
-    )?;
-
-    let limit: usize =
-        query.validate_limit()?;
-
-    with_app_state(
-        |AppState { items }| {
-            let mut result: Vec<_> =
-                items
-                    .values()
-                    .filter(|t| {
-                        query.check_keyword(t) &&
-                        query.check_priority(t) &&
-                        query.check_status(t) &&
-                        deadline
-                            .map(|deadline| {
-                                if let Some(before) = t.deadline {
-                                    before <= deadline
-                                } else {
-                                    true
-                                }
-                            })
-                            .unwrap_or(true)
-                    })
-                    .cloned()
-                    .collect();
-
-            match query.sort {
-                Some(
-                    QuerySort::Priority,
-                ) => {
-                    result.sort_by_key(
-                        |t: &Todo| cmp::Reverse(t.priority)
-                    );
-                }
-                Some(
-                    QuerySort::Status,
-                ) => {
-                    result.sort_by_key(
-                        |t| t.status,
-                    );
-                }
-                Some(
-                    QuerySort::Deadline,
-                ) => {
-                    result.sort_by_key(
-                        |t| cmp::Reverse(t.deadline)
-                    );
-                }
-                None => {
-                    result.sort_by_key(
-                        |t| {
-                            t.title
-                                .clone()
-                        },
-                    );
-                }
-            };
-
-            Ok(result
-                .into_iter()
-                .take(limit)
-                .collect())
-        },
-    )
-}
-
-pub fn get(
-    id: String,
-) -> AppResult<Todo> {
-    with_app_state(
-        |AppState { items }| {
-            if let Some(item) =
-                items.get(&id)
-            {
-                Ok(item.clone())
-            } else {
-                Err(item_not_found(&id))
-            }
-        },
-    )
-}
-
-pub fn count() -> AppResult<u64> {
-    with_app_state(
-        |AppState { items }| {
-            u64_from(items.len())
-        },
-    )
-}
-
-pub fn delete(
-    id: String,
-) -> AppResult<()> {
-    with_app_state(
-        |AppState { items }| {
-            if items.contains_key(&id) {
-                items.remove(&id);
-
-                Ok(())
-            } else {
-                Err(item_not_found(&id))
-            }
-        },
-    )
-}
-
-pub fn delete_done_items() -> u64 {
-    with_app_state(
-        |AppState { items }| {
-            let mut count: u64 = 0;
-
-            items.retain(|_, item| {
-                if item.status
-                    == Status::Done
+                if let Some(
+                    priority_update,
+                ) = change.priority
                 {
-                    count += 1;
-                    false
-                } else {
-                    true
+                    if todo.priority != priority_update {
+                        todo.priority = priority_update;
+                        modified = true;
+                    }
                 }
-            });
 
-            count
-        },
-    )
-}
+                if let Some(
+                    status_update,
+                ) = change.status
+                {
+                    if todo.status
+                        != status_update
+                    {
+                        todo.status = status_update;
+                        modified = true;
+                    }
+                }
 
-pub fn delete_all() -> AppResult<u64> {
-    with_app_state(
-        |AppState { items }| {
-            let count = items.len();
+                if todo.deadline
+                    != deadline_update
+                {
+                    todo.deadline =
+                        deadline_update;
+                    modified = true;
+                }
 
-            items.clear();
+                if modified {
+                    todo.updated_timestamp = unix_time_now!();
+                }
 
-            u64_from(count)
-        },
-    )
+                Ok(todo.clone())
+            } else {
+                Err(item_not_found(&id))
+            }
+        } else {
+            Err("At least one change must be present.".to_string())
+        }
+    }
+
+    pub fn search(
+        &mut self,
+        query: Query,
+    ) -> AppResult<Vec<Todo>> {
+        let deadline = unix_time_from(
+            &query.deadline,
+        )?;
+
+        let limit: usize =
+            query.validate_limit()?;
+
+        let mut result: Vec<_> = self.0
+            .values()
+            .filter(|t| {
+                query.check_keyword(t) &&
+                query.check_priority(t) &&
+                query.check_status(t) &&
+                deadline
+                    .map(|deadline| {
+                        if let Some(before) = t.deadline {
+                            before <= deadline
+                        } else {
+                            true
+                        }
+                    })
+                    .unwrap_or(true)
+            })
+            .cloned()
+            .collect();
+
+        match query.sort {
+            Some(
+                QuerySort::Priority,
+            ) => {
+                result.sort_by_key(
+                    |t: &Todo| {
+                        cmp::Reverse(
+                            t.priority,
+                        )
+                    },
+                );
+            }
+            Some(QuerySort::Status) => {
+                result.sort_by_key(
+                    |t| t.status,
+                );
+            }
+            Some(
+                QuerySort::Deadline,
+            ) => {
+                result.sort_by_key(
+                    |t| {
+                        cmp::Reverse(
+                            t.deadline,
+                        )
+                    },
+                );
+            }
+            None => {
+                result.sort_by_key(
+                    |t| t.title.clone(),
+                );
+            }
+        };
+
+        Ok(result
+            .into_iter()
+            .take(limit)
+            .collect())
+    }
+
+    pub fn get(
+        &self,
+        id: String,
+    ) -> AppResult<Todo> {
+        if let Some(item) =
+            self.0.get(&id)
+        {
+            Ok(item.clone())
+        } else {
+            Err(item_not_found(&id))
+        }
+    }
+
+    pub fn count(
+        &self,
+    ) -> AppResult<u64> {
+        u64_from(self.0.len())
+    }
+
+    pub fn delete(
+        &mut self,
+        id: String,
+    ) -> AppResult<()> {
+        if self.0.contains_key(&id) {
+            self.0.remove(&id);
+
+            Ok(())
+        } else {
+            Err(item_not_found(&id))
+        }
+    }
+
+    pub fn delete_done_items(
+        &mut self,
+    ) -> u64 {
+        let mut count: u64 = 0;
+
+        self.0.retain(|_, item| {
+            if item.status
+                == Status::Done
+            {
+                count += 1;
+                false
+            } else {
+                true
+            }
+        });
+
+        count
+    }
+
+    pub fn delete_all(
+        &mut self,
+    ) -> AppResult<u64> {
+        let count = self.0.len();
+
+        self.0.clear();
+
+        u64_from(count)
+    }
 }
 
 #[cfg(test)]
