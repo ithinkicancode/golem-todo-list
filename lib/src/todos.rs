@@ -214,12 +214,13 @@ impl TodoList {
         &mut self,
         item: NewTodo,
     ) -> AppResult<Todo> {
-        let title =
-            item.validate_title()?;
-
         let deadline = unix_time_from(
             &item.deadline,
         )?;
+
+        let title = item
+            .validate_title()?
+            .to_string();
 
         let id =
             Uuid::new_v4().to_string();
@@ -228,7 +229,7 @@ impl TodoList {
 
         let item = Todo {
             id,
-            title: title.to_string(),
+            title,
             priority: item.priority,
             deadline,
             status: Status::Backlog,
