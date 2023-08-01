@@ -94,7 +94,7 @@ fn todo_for_outgoing(t: todos::Todo) -> Todo {
 
 struct AppState(TodoList);
 
-static mut APP_STATE: Lazy<AppState> = Lazy::new(|| AppState(TodoList::new()));
+static mut APP_STATE: Lazy<AppState> = Lazy::new(|| AppState(Default::default()));
 
 fn with_app_state<T>(f: impl FnOnce(&mut AppState) -> T) -> T {
     unsafe { f(&mut APP_STATE) }

@@ -199,15 +199,11 @@ fn u64_from(
     )
 }
 
+#[derive(Default)]
 pub struct TodoList(
     HashMap<String, Todo>,
 );
-
 impl TodoList {
-    pub fn new() -> Self {
-        Self(HashMap::new())
-    }
-
     pub fn add(
         &mut self,
         item: NewTodo,
