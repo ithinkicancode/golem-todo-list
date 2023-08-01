@@ -56,6 +56,13 @@ Then upload the Wasm binary and run it on Golem Cloud (skip to step 6 if you hav
   todos golem:todos/api/search --parameters '[{"keyword": "todo"}]'
   ```
 
+  * `search` without any keyword will return top 10 todo's sorted by the "title" field.
+
+  ```bash
+  todos golem:todos/api/search --parameters '[{}]'
+  ```
+
+
   * META-TODO: finish this readme!
 
 Check out my other Golem projects [here](https://github.com/ithinkicancode/golem-fibonacci) (also a recommended project structure/template) and [here](https://github.com/ithinkicancode/golem-wordle). Have fun!

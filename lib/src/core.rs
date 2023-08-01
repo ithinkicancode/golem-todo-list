@@ -19,18 +19,20 @@ pub(crate) fn unix_time_from(
     maybe: &Option<String>,
 ) -> AppResult<Option<i64>> {
     maybe.as_ref().map(|s| {
-        let s = format!("{}:00:00", s);
         let unix_time =
-            NaiveDateTime::parse_from_str(&s, &DATE_TIME_FORMAT)
-                .map_err(|e| {
-                    format!(
-                        "ERROR: '{}' is NOT in the required format of '{}': {:?}.",
-                        s,
-                        USER_DATE_TIME_FORMAT,
-                        e.to_string()
-                    )
-                })?
-                .timestamp();
+            NaiveDateTime::parse_from_str(
+                &format!("{}:00:00", s),
+                &DATE_TIME_FORMAT
+            )
+            .map_err(|e| {
+                format!(
+                    "ERROR: '{}' is NOT in the required format of '{}': {:?}.",
+                    s,
+                    USER_DATE_TIME_FORMAT,
+                    e.to_string()
+                )
+            })?
+            .timestamp();
 
         Ok(unix_time)
     })
@@ -41,17 +43,53 @@ pub(crate) fn unix_time_from(
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
+    use test_case::test_case;
 
-    #[test]
-    fn unix_time_from_should_succeed_with_correct_unix_time(
+    #[test_case(
+        "2022-01-01 09",
+        1641027600 ;
+        "epoch of 2022-01-01 09 hour should be 1641027600"
+    )]
+    #[test_case(
+        "1970-01-01 00",
+        0 ;
+        "epoch of 1970-01-01 00 hour should be 0"
+    )]
+    fn unix_time_from_should_succeed_with_expected_unix_time(
+        input: &str,
+        expected: i64,
     ) {
-        let input = "2022-01-01 09";
         let actual = unix_time_from(
             &Some(input.to_string()),
         )
         .unwrap()
         .unwrap();
 
-        assert_eq!(actual, 1641027600)
+        assert_eq!(actual, expected)
+    }
+
+    #[test]
+    fn unix_time_from_should_succeed_with_none_when_input_is_none(
+    ) {
+        let actual =
+            unix_time_from(&None)
+                .unwrap();
+
+        assert_eq!(actual, None)
+    }
+
+    #[test_case("2022-01-01")]
+    #[test_case("abc")]
+    fn unix_time_from_should_fail_when_input_does_not_match_expected_date_time_format(
+        input: &str,
+    ) {
+        let actual = unix_time_from(
+            &Some(input.to_string()),
+        )
+        .unwrap_err();
+
+        assert!(
+            actual.contains("is NOT in the required format of"),
+        )
     }
 }

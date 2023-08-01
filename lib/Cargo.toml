@@ -19,3 +19,4 @@ features = [
 
 [dev-dependencies]
 pretty_assertions = "~1.4.0"
+test-case = "~3.1.0"
