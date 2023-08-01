@@ -62,7 +62,46 @@ Then upload the Wasm binary and run it on Golem Cloud (skip to step 6 if you hav
   todos golem:todos/api/search --parameters '[{}]'
   ```
 
+  * We can sort the search results by "priority", "status" or "deadline", as well as limiting the number of results by setting the `limit` field (100 max).
 
-  * META-TODO: finish this readme!
+  ```bash
+  todos golem:todos/api/search --parameters '[{"sort": "priority", "limit": 2}]'
+  ```
+
+  * If we know the UUID of a todo item, we can also retrieve that item by using the `get` command. For example:
+
+  ```bash
+  todos golem:todos/api/get --parameters '["90e00f90-eda0-4448-80ec-b019898d1150"]'
+  ```
+
+  * Let's check and see if there is any todo currently in progress.
+
+  ```bash
+  todos golem:todos/api/search --parameters '[{"status": "in-progress"}]'
+  ```
+
+  * We don't. Let's start working on one and update its status to in-progress.
+
+  ```bash
+  todos golem:todos/api/update --parameters '["90e00f90-eda0-4448-80ec-b019898d1150", {"status": "in-progress"}]'
+  ```
+
+  * We can delete a todo by specifying its UUID in the `delete` command.
+
+  ```bash
+  todos golem:todos/api/delete --parameters '["90e00f90-eda0-4448-80ec-b019898d1150"]'
+  ```
+
+  * We can also delete all the "done" items by running the `delete-done-items` command. This command will return the number of deleted items.
+
+  ```bash
+  todos golem:todos/api/delete-done-items --parameters '[]'
+  ```
+
+  * Finally we delete all todo's with the `delete-all` command. This command will also return the number of deleted items.
+
+  ```bash
+  todos golem:todos/api/delete-all --parameters '[]'
+  ```
 
 Check out my other Golem projects [here](https://github.com/ithinkicancode/golem-fibonacci) (also a recommended project structure/template) and [here](https://github.com/ithinkicancode/golem-wordle). Have fun!
