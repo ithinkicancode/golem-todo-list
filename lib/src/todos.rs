@@ -324,7 +324,7 @@ impl TodoList {
     }
 
     pub fn search(
-        &mut self,
+        &self,
         query: Query,
     ) -> AppResult<Vec<Todo>> {
         let deadline = unix_time_from(
