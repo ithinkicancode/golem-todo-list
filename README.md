@@ -38,7 +38,16 @@ Then upload the Wasm binary and run it on Golem Cloud (skip to step 6 if you hav
 
   ```bash
   todos golem:todos/api/count --parameters '[]'
+  ```
 
+  * Let's some todo's! We will see a payload returning from each call.
+
+  ```bash
+  todos golem:todos/api/add --parameters '[{"title": "todo #1", "priority": "low", "deadline": null}]'
+
+  todos golem:todos/api/add --parameters '[{"title": "todo #2", "priority": "high", "deadline": "2022-06-18 13"}]'
+
+  todos golem:todos/api/add --parameters '[{"title": "todo #3", "priority": "medium", "deadline": "2023-06-19 08"}]'
   ```
 
   * META-TODO: finish this readme!
