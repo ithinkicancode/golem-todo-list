@@ -40,7 +40,7 @@ Then upload the Wasm binary and run it on Golem Cloud (skip to step 6 if you hav
   todos golem:todos/api/count --parameters '[]'
   ```
 
-  * Let's some todo's! We will see a payload returning from each call.
+  * Let's add some todo's! We will see a payload of newly-created todo item returning from each call.
 
   ```bash
   todos golem:todos/api/add --parameters '[{"title": "todo #1", "priority": "low", "deadline": null}]'
@@ -48,6 +48,12 @@ Then upload the Wasm binary and run it on Golem Cloud (skip to step 6 if you hav
   todos golem:todos/api/add --parameters '[{"title": "todo #2", "priority": "high", "deadline": "2022-06-18 13"}]'
 
   todos golem:todos/api/add --parameters '[{"title": "todo #3", "priority": "medium", "deadline": "2023-06-19 08"}]'
+  ```
+
+  * Now we can run the `search` command to retrieve these todo's by filtering by keyword.
+
+  ```bash
+  todos golem:todos/api/search --parameters '[{"keyword": "todo"}]'
   ```
 
   * META-TODO: finish this readme!
