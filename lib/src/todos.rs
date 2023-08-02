@@ -191,16 +191,6 @@ fn item_not_found(id: &str) -> String {
     )
 }
 
-fn u64_from(
-    n: usize,
-) -> AppResult<u64> {
-    u64::try_from(n).map_err(
-        |e| {
-            format!("ERROR converting {} to u64: {}", n, e.to_string())
-        }
-    )
-}
-
 #[derive(Default)]
 pub struct TodoList(
     HashMap<String, Todo>,
@@ -409,10 +399,8 @@ impl TodoList {
             })
     }
 
-    pub fn count(
-        &self,
-    ) -> AppResult<u64> {
-        u64_from(self.0.len())
+    pub fn count(&self) -> usize {
+        self.0.len()
     }
 
     pub fn delete(
@@ -448,12 +436,12 @@ impl TodoList {
 
     pub fn delete_all(
         &mut self,
-    ) -> AppResult<u64> {
+    ) -> usize {
         let count = self.0.len();
 
         self.0.clear();
 
-        u64_from(count)
+        count
     }
 }
 
@@ -497,10 +485,7 @@ mod tests {
     ) {
         let todos = TodoList::new();
 
-        assert_eq!(
-            todos.count().unwrap(),
-            0
-        );
+        assert_eq!(todos.count(), 0);
     }
 
     #[test]
@@ -535,7 +520,7 @@ mod tests {
         let mut todos = TodoList::new();
 
         assert_eq!(
-            todos.delete_all().unwrap(),
+            todos.delete_all(),
             0
         );
     }

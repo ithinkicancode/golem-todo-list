@@ -1,6 +1,6 @@
 use bindings::{export, exports::golem::todos::api::*};
 use lib::{
-    core::AppResult,
+    core::{u64_from, AppResult},
     todos::{self, TodoList},
 };
 use once_cell::sync::Lazy;
@@ -138,7 +138,7 @@ impl Api for Todos {
     }
 
     fn count() -> AppResult<u64> {
-        with_app_state(|AppState(todos)| todos.count())
+        with_app_state(|AppState(todos)| u64_from(todos.count()))
     }
 
     fn delete(id: String) -> AppResult<()> {
@@ -150,7 +150,7 @@ impl Api for Todos {
     }
 
     fn delete_all() -> AppResult<u64> {
-        with_app_state(|AppState(todos)| todos.delete_all())
+        with_app_state(|AppState(todos)| u64_from(todos.delete_all()))
     }
 }
 export!(Todos);
