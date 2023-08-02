@@ -165,7 +165,12 @@ impl UpdateTodo {
 }
 
 #[derive(
-    Clone, Debug, Getters, CopyGetters,
+    Clone,
+    Debug,
+    Eq,
+    PartialEq,
+    Getters,
+    CopyGetters,
 )]
 pub struct Todo {
     #[getset(get = "pub")]
@@ -523,5 +528,85 @@ mod tests {
             todos.delete_all(),
             0
         );
+    }
+
+    #[test]
+    fn todolist_add_should_return_newly_created_todo(
+    ) {
+        let mut todos = TodoList::new();
+
+        let title = "test";
+        let priority = Priority::Medium;
+
+        let item = NewTodo {
+            title: title.to_string(),
+            priority,
+            deadline: None,
+        };
+
+        let actual =
+            todos.add(item).unwrap();
+
+        assert_eq!(actual.title, title);
+        assert_eq!(
+            actual.priority,
+            priority
+        );
+        assert_eq!(
+            actual.status,
+            Status::Backlog
+        );
+        assert!(actual
+            .deadline
+            .is_none());
+        assert_eq!(todos.count(), 1);
+    }
+
+    #[test]
+    fn todolist_search_should_return_matching_todos_in_requested_order(
+    ) {
+        let mut todos = TodoList::new();
+
+        todos
+            .add(NewTodo {
+                title: "1".to_string(),
+                priority: Priority::Low,
+                deadline: None,
+            })
+            .unwrap();
+        let todo2 = todos
+            .add(NewTodo {
+                title: "2".to_string(),
+                priority:
+                    Priority::Medium,
+                deadline: None,
+            })
+            .unwrap();
+        let todo3 = todos
+            .add(NewTodo {
+                title: "3".to_string(),
+                priority:
+                    Priority::High,
+                deadline: None,
+            })
+            .unwrap();
+
+        let actual = todos
+            .search(Query {
+                keyword: None,
+                priority: None,
+                status: None,
+                deadline: None,
+                limit: Some(2),
+                sort: Some(
+                    QuerySort::Priority,
+                ),
+            })
+            .unwrap();
+
+        let expected =
+            vec![todo3, todo2];
+
+        assert_eq!(actual, expected);
     }
 }
