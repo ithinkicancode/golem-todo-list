@@ -58,6 +58,16 @@ pub enum QuerySort {
 }
 
 #[derive(
+    Ord, Eq, PartialEq, PartialOrd,
+)]
+enum SortBy {
+    Deadline(cmp::Reverse<Option<i64>>),
+    Priority(cmp::Reverse<Priority>),
+    Status(Status),
+    Title(String),
+}
+
+#[derive(
     Clone, Default, TypedBuilder,
 )]
 pub struct Query {
@@ -329,7 +339,7 @@ impl TodoList {
             &query.deadline,
         )?;
 
-        let limit: usize =
+        let capacity: usize =
             query.validate_limit()?;
 
         let mut result: Vec<_> = self.0
@@ -351,44 +361,39 @@ impl TodoList {
             .cloned()
             .collect();
 
-        match query.sort {
-            Some(
-                QuerySort::Priority,
-            ) => {
-                result.sort_by_key(
-                    |t| {
-                        cmp::Reverse(
-                            t.priority,
-                        )
-                    },
-                );
-            }
-            Some(QuerySort::Status) => {
-                result.sort_by_key(
-                    |t| t.status,
-                );
-            }
-            Some(
-                QuerySort::Deadline,
-            ) => {
-                result.sort_by_key(
-                    |t| {
-                        cmp::Reverse(
-                            t.deadline,
-                        )
-                    },
-                );
-            }
-            None => {
-                result.sort_by_key(
-                    |t| t.title.clone(),
-                );
-            }
-        };
+        let get_sort_key =
+            |t: &Todo| match query.sort
+            {
+                Some(
+                    QuerySort::Priority,
+                ) => SortBy::Priority(
+                    cmp::Reverse(
+                        t.priority,
+                    ),
+                ),
+                Some(
+                    QuerySort::Status,
+                ) => SortBy::Status(
+                    t.status,
+                ),
+                Some(
+                    QuerySort::Deadline,
+                ) => SortBy::Deadline(
+                    cmp::Reverse(
+                        t.deadline,
+                    ),
+                ),
+                None => SortBy::Title(
+                    t.title.clone(),
+                ),
+            };
+
+        result
+            .sort_by_key(get_sort_key);
 
         Ok(result
             .into_iter()
-            .take(limit)
+            .take(capacity)
             .collect())
     }
 
@@ -567,16 +572,16 @@ mod tests {
     ) {
         let mut todos = TodoList::new();
 
-        todos
+        let todo1 = todos
             .add(NewTodo {
-                title: "1".to_string(),
+                title: "x".to_string(),
                 priority: Priority::Low,
                 deadline: None,
             })
             .unwrap();
         let todo2 = todos
             .add(NewTodo {
-                title: "2".to_string(),
+                title: "y".to_string(),
                 priority:
                     Priority::Medium,
                 deadline: None,
@@ -584,7 +589,7 @@ mod tests {
             .unwrap();
         let todo3 = todos
             .add(NewTodo {
-                title: "3".to_string(),
+                title: "z".to_string(),
                 priority:
                     Priority::High,
                 deadline: None,
@@ -605,7 +610,23 @@ mod tests {
             .unwrap();
 
         let expected =
-            vec![todo3, todo2];
+            vec![todo3, todo2.clone()];
+
+        assert_eq!(actual, expected);
+
+        let actual = todos
+            .search(Query {
+                keyword: None,
+                priority: None,
+                status: None,
+                deadline: None,
+                sort: None,
+                limit: Some(2),
+            })
+            .unwrap();
+
+        let expected =
+            vec![todo1, todo2];
 
         assert_eq!(actual, expected);
     }
