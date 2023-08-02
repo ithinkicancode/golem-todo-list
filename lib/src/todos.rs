@@ -66,6 +66,36 @@ enum SortBy {
     Status(Status),
     Title(String),
 }
+impl SortBy {
+    fn from(
+        query_sort: &Option<QuerySort>,
+    ) -> impl Fn(&Todo) -> Self + '_
+    {
+        move |t: &Todo| match query_sort
+        {
+            Some(
+                QuerySort::Priority,
+            ) => SortBy::Priority(
+                cmp::Reverse(
+                    t.priority,
+                ),
+            ),
+            Some(QuerySort::Status) => {
+                SortBy::Status(t.status)
+            }
+            Some(
+                QuerySort::Deadline,
+            ) => SortBy::Deadline(
+                cmp::Reverse(
+                    t.deadline,
+                ),
+            ),
+            None => SortBy::Title(
+                t.title.clone(),
+            ),
+        }
+    }
+}
 
 #[derive(
     Clone, Default, TypedBuilder,
@@ -361,35 +391,9 @@ impl TodoList {
             .cloned()
             .collect();
 
-        let get_sort_key =
-            |t: &Todo| match query.sort
-            {
-                Some(
-                    QuerySort::Priority,
-                ) => SortBy::Priority(
-                    cmp::Reverse(
-                        t.priority,
-                    ),
-                ),
-                Some(
-                    QuerySort::Status,
-                ) => SortBy::Status(
-                    t.status,
-                ),
-                Some(
-                    QuerySort::Deadline,
-                ) => SortBy::Deadline(
-                    cmp::Reverse(
-                        t.deadline,
-                    ),
-                ),
-                None => SortBy::Title(
-                    t.title.clone(),
-                ),
-            };
-
-        result
-            .sort_by_key(get_sort_key);
+        result.sort_by_key(
+            SortBy::from(&query.sort),
+        );
 
         Ok(result
             .into_iter()
