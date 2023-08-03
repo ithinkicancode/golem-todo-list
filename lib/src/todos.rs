@@ -131,34 +131,51 @@ impl Query {
             )
     }
 
-    fn check_keyword(
+    fn match_keyword(
         &self,
-        item: &Todo,
+        todo: &Todo,
     ) -> bool {
         self.keyword
             .as_ref()
             .map(|keyword| {
-                item.title
+                todo.title
                     .contains(keyword)
             })
             .unwrap_or(true)
     }
 
-    fn check_priority(
+    fn match_priority(
         &self,
-        item: &Todo,
+        todo: &Todo,
     ) -> bool {
         self.priority
-            .map(|p| p == item.priority)
+            .map(|p| p == todo.priority)
             .unwrap_or(true)
     }
 
-    fn check_status(
+    fn match_status(
         &self,
-        item: &Todo,
+        todo: &Todo,
     ) -> bool {
         self.status
-            .map(|s| s == item.status)
+            .map(|s| s == todo.status)
+            .unwrap_or(true)
+    }
+
+    fn match_deadline(
+        deadline: &Option<i64>,
+        todo: &Todo,
+    ) -> bool {
+        deadline
+            .map(|deadline| {
+                if let Some(before) =
+                    todo.deadline
+                {
+                    before <= deadline
+                } else {
+                    true
+                }
+            })
             .unwrap_or(true)
     }
 }
@@ -369,35 +386,27 @@ impl TodoList {
             &query.deadline,
         )?;
 
-        let capacity: usize =
+        let top_n: usize =
             query.validate_limit()?;
 
-        let mut result: Vec<_> = self.0
+        let mut filtered: Vec<_> = self.0
             .values()
             .filter(|t| {
-                query.check_keyword(t) &&
-                query.check_priority(t) &&
-                query.check_status(t) &&
-                deadline
-                    .map(|deadline| {
-                        if let Some(before) = t.deadline {
-                            before <= deadline
-                        } else {
-                            true
-                        }
-                    })
-                    .unwrap_or(true)
+                query.match_keyword(t) &&
+                query.match_priority(t) &&
+                query.match_status(t) &&
+                Query::match_deadline(&deadline, t)
             })
             .cloned()
             .collect();
 
-        result.sort_by_key(
+        filtered.sort_by_key(
             SortBy::from(&query.sort),
         );
 
-        Ok(result
+        Ok(filtered
             .into_iter()
-            .take(capacity)
+            .take(top_n)
             .collect())
     }
 
