@@ -34,10 +34,10 @@ Then upload the Wasm binary and run it on Golem Cloud (skip to step 6 if you hav
 
 9. Now let's get organized! ✅
 
-  * Run the `count` command to verify that our todo list is currently empty.
+  * Run the `count-all` command to verify that our todo list is currently empty.
 
   ```bash
-  todos golem:todos/api/count --parameters '[]'
+  todos golem:todos/api/count-all --parameters '[]'
   ```
 
   * Let's add some todo's using `add` command. We will see a payload of newly-created todo item returning from each call.
