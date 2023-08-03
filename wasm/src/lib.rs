@@ -86,8 +86,6 @@ fn filter_from_incoming(filter: Filter) -> todos::Query {
         .priority(filter.priority.map(priority_from_incoming))
         .status(filter.status.map(status_from_incoming))
         .deadline(filter.deadline)
-        .sort(None)
-        .limit(None)
         .build()
 }
 

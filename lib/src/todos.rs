@@ -30,8 +30,9 @@ macro_rules! unix_time_now {
     Debug,
     Eq,
     PartialEq,
-    PartialOrd,
+    Hash,
     Ord,
+    PartialOrd,
 )]
 pub enum Status {
     Backlog,
@@ -45,8 +46,9 @@ pub enum Status {
     Debug,
     Eq,
     PartialEq,
-    PartialOrd,
+    Hash,
     Ord,
+    PartialOrd,
 )]
 pub enum Priority {
     Low,
@@ -105,11 +107,17 @@ impl SortBy {
     Clone, Default, TypedBuilder,
 )]
 pub struct Query {
+    #[builder(default)]
     keyword: Option<String>,
+    #[builder(default)]
     priority: Option<Priority>,
+    #[builder(default)]
     status: Option<Status>,
+    #[builder(default)]
     deadline: Option<String>,
+    #[builder(default)]
     sort: Option<QuerySort>,
+    #[builder(default)]
     limit: Option<ResultCap>,
 }
 impl Query {
@@ -186,10 +194,11 @@ impl Query {
     }
 }
 
-#[derive(TypedBuilder)]
+#[derive(Clone, TypedBuilder)]
 pub struct NewTodo {
     title: String,
     priority: Priority,
+    #[builder(default)]
     deadline: Option<String>,
 }
 impl NewTodo {
@@ -232,6 +241,7 @@ impl UpdateTodo {
     Debug,
     Eq,
     PartialEq,
+    Hash,
     Getters,
     CopyGetters,
 )]
@@ -523,7 +533,9 @@ impl TodoList {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use maplit::hashset;
     use pretty_assertions::assert_eq;
+    use std::collections::HashSet;
 
     impl Query {
         fn empty() -> Self {
@@ -641,65 +653,136 @@ mod tests {
     }
 
     #[test]
-    fn todolist_search_should_return_matching_todos_in_requested_order(
+    fn todolist_search_should_return_matching_items_in_requested_order(
     ) {
         let mut todos = TodoList::new();
 
-        let todo1 = todos
+        let low_todo = NewTodo {
+            title: "a".to_string(),
+            priority: Priority::Low,
+            deadline: None,
+        };
+
+        let todo_a = todos
+            .add(low_todo.clone())
+            .unwrap();
+        let todo_b = todos
             .add(NewTodo {
-                title: "x".to_string(),
-                priority: Priority::Low,
-                deadline: None,
+                title: "b".to_string(),
+                ..low_todo.clone()
             })
             .unwrap();
-        let todo2 = todos
+        let todo_c = todos
             .add(NewTodo {
-                title: "y".to_string(),
-                priority:
-                    Priority::Medium,
-                deadline: None,
-            })
-            .unwrap();
-        let todo3 = todos
-            .add(NewTodo {
-                title: "z".to_string(),
-                priority:
-                    Priority::High,
-                deadline: None,
+                title: "c".to_string(),
+                ..low_todo.clone()
             })
             .unwrap();
 
+        let med_todo = NewTodo {
+            priority: Priority::Medium,
+            ..low_todo
+        };
+
+        let todo_d = todos
+            .add(NewTodo {
+                title: "d".to_string(),
+                ..med_todo.clone()
+            })
+            .unwrap();
+        let todo_e = todos
+            .add(NewTodo {
+                title: "e".to_string(),
+                ..med_todo.clone()
+            })
+            .unwrap();
+        let todo_f = todos
+            .add(NewTodo {
+                title: "f".to_string(),
+                ..med_todo.clone()
+            })
+            .unwrap();
+
+        let high_todo = NewTodo {
+            priority: Priority::High,
+            ..med_todo
+        };
+
+        let todo_g = todos
+            .add(NewTodo {
+                title: "g".to_string(),
+                ..high_todo.clone()
+            })
+            .unwrap();
+        let todo_h = todos
+            .add(NewTodo {
+                title: "h".to_string(),
+                ..high_todo.clone()
+            })
+            .unwrap();
+        let todo_i = todos
+            .add(NewTodo {
+                title: "i".to_string(),
+                ..high_todo
+            })
+            .unwrap();
+
+        // sort by priority
+        let mut actual_highs = todos
+            .search(
+                Query::builder()
+                    .limit(Some(5))
+                    .sort(Some(QuerySort::Priority))
+                    .build()
+            )
+            .unwrap();
+
+        let split_at = 3;
+
+        let actual_mediums: HashSet<_> =
+            actual_highs
+                .split_off(split_at)
+                .into_iter()
+                .collect();
+
+        let actual_highs: HashSet<_> =
+            actual_highs
+                .into_iter()
+                .collect();
+
+        let expected_highs = hashset! {
+            todo_g,
+            todo_h,
+            todo_i,
+        };
+        let expected_mediums = hashset! {
+            todo_d.clone(),
+            todo_e.clone(),
+            todo_f,
+        };
+
+        assert_eq!(
+            actual_highs,
+            expected_highs
+        );
+        assert!(actual_mediums
+            .is_subset(
+                &expected_mediums
+            ));
+
+        // sort by title alphabetically
         let actual = todos
-            .search(Query {
-                keyword: None,
-                priority: None,
-                status: None,
-                deadline: None,
-                limit: Some(2),
-                sort: Some(
-                    QuerySort::Priority,
-                ),
-            })
+            .search(
+                Query::builder()
+                    .limit(Some(5))
+                    .build(),
+            )
             .unwrap();
 
-        let expected =
-            vec![todo3, todo2.clone()];
-
-        assert_eq!(actual, expected);
-
-        let actual = todos
-            .search(Query {
-                keyword: None,
-                priority: None,
-                status: None,
-                deadline: None,
-                sort: None,
-                limit: Some(2),
-            })
-            .unwrap();
-
-        let expected =
-            vec![todo1, todo2];
+        let expected = vec![
+            todo_a, todo_b, todo_c,
+            todo_d, todo_e,
+        ];
 
         assert_eq!(actual, expected);
     }

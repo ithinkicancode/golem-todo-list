@@ -19,5 +19,6 @@ features = [
 ]
 
 [dev-dependencies]
+maplit = "~1.0.2"
 pretty_assertions = "~1.4.0"
 test-case = "~3.1.0"
