@@ -52,15 +52,24 @@ interface api {
     limit: option<u32>,
   }
 
+  record filter {
+    keyword: option<string>,
+    priority: option<priority>,
+    status: option<status>,
+    deadline: option<string>,
+  }
+
   add: func(item: new-todo) -> result<todo, string>
 
   update: func(id: string, change: update-todo) -> result<todo, string>
 
   search: func(query: query) -> result<list<todo>, string>
 
-  get: func(id: string) -> result<todo, string>
+  count-by: func(filter: filter) -> result<u64, string>
 
-  count: func() -> result<u64, string>
+  count-all: func() -> result<u64, string>
+
+  get: func(id: string) -> result<todo, string>
 
   delete: func(id: string) -> result<_, string>
 

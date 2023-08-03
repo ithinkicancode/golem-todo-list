@@ -80,6 +80,17 @@ fn query_from_incoming(query: Query) -> todos::Query {
         .build()
 }
 
+fn filter_from_incoming(filter: Filter) -> todos::Query {
+    todos::Query::builder()
+        .keyword(filter.keyword)
+        .priority(filter.priority.map(priority_from_incoming))
+        .status(filter.status.map(status_from_incoming))
+        .deadline(filter.deadline)
+        .sort(None)
+        .limit(None)
+        .build()
+}
+
 fn todo_for_outgoing(t: todos::Todo) -> Todo {
     Todo {
         id: t.id().to_string(),
@@ -129,16 +140,24 @@ impl Api for Todos {
         })
     }
 
+    fn count_by(filter: Filter) -> AppResult<u64> {
+        with_app_state(|AppState(todos)| {
+            let count = todos.count_by(filter_from_incoming(filter))?;
+
+            u64_from(count)
+        })
+    }
+
+    fn count_all() -> AppResult<u64> {
+        with_app_state(|AppState(todos)| u64_from(todos.count_all()))
+    }
+
     fn get(id: String) -> AppResult<Todo> {
         with_app_state(|AppState(todos)| {
             let result = todos.get(&id)?;
 
             Ok(todo_for_outgoing(result))
         })
-    }
-
-    fn count() -> AppResult<u64> {
-        with_app_state(|AppState(todos)| u64_from(todos.count()))
     }
 
     fn delete(id: String) -> AppResult<()> {

@@ -384,6 +384,22 @@ impl TodoList {
         }
     }
 
+    fn filter_by<'a>(
+        &'a self,
+        query: &'a Query,
+        deadline: Option<i64>,
+    ) -> impl Iterator<Item = &Todo>
+    {
+        self.0
+            .values()
+            .filter(move |t| {
+                query.match_keyword(t) &&
+                query.match_priority(t) &&
+                query.match_status(t) &&
+                Query::match_deadline(&deadline, t)
+            })
+    }
+
     pub fn search(
         &self,
         query: Query,
@@ -394,16 +410,6 @@ impl TodoList {
 
         let top_n =
             query.validate_limit()?;
-
-        let filtered = self.0
-            .values()
-            .filter(|t| {
-                query.match_keyword(t) &&
-                query.match_priority(t) &&
-                query.match_status(t) &&
-                Query::match_deadline(&deadline, t)
-            })
-            .cloned();
 
         let sort =
             SortBy::from(&query.sort);
@@ -416,9 +422,11 @@ impl TodoList {
 
         let mut count: usize = 0;
 
-        for t in filtered {
+        for t in self
+            .filter_by(&query, deadline)
+        {
             if count < top_n {
-                heap.push(t);
+                heap.push(t.clone());
 
                 count += 1;
             } else if let Some(
@@ -426,10 +434,9 @@ impl TodoList {
             ) =
                 heap.peek_mut()
             {
-                if sort(&todo)
-                    > sort(&t)
+                if sort(&todo) > sort(t)
                 {
-                    *todo = t;
+                    *todo = t.clone();
                 }
             } else {
                 unreachable!("DEFECT: Heap in `TodoList::search` is empty.");
@@ -437,6 +444,25 @@ impl TodoList {
         }
 
         Ok(heap.into_sorted_vec())
+    }
+
+    pub fn count_by(
+        &self,
+        query: Query,
+    ) -> AppResult<usize> {
+        let deadline = unix_time_from(
+            &query.deadline,
+        )?;
+
+        let count = self
+            .filter_by(&query, deadline)
+            .count();
+
+        Ok(count)
+    }
+
+    pub fn count_all(&self) -> usize {
+        self.0.len()
     }
 
     pub fn get(
@@ -449,10 +475,6 @@ impl TodoList {
             .ok_or_else(|| {
                 item_not_found(id)
             })
-    }
-
-    pub fn count(&self) -> usize {
-        self.0.len()
     }
 
     pub fn delete(
@@ -490,7 +512,7 @@ impl TodoList {
     pub fn delete_all(
         &mut self,
     ) -> usize {
-        let count = self.count();
+        let count = self.count_all();
 
         self.0.clear();
 
@@ -538,7 +560,10 @@ mod tests {
     ) {
         let todos = TodoList::new();
 
-        assert_eq!(todos.count(), 0);
+        assert_eq!(
+            todos.count_all(),
+            0
+        );
     }
 
     #[test]
@@ -609,7 +634,10 @@ mod tests {
         assert!(actual
             .deadline
             .is_none());
-        assert_eq!(todos.count(), 1);
+        assert_eq!(
+            todos.count_all(),
+            1
+        );
     }
 
     #[test]
