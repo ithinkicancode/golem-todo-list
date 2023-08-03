@@ -1,6 +1,7 @@
 use crate::core::{
     unix_time_from, AppResult,
 };
+use binary_heap_plus::BinaryHeap;
 use chrono::Utc;
 use getset::{CopyGetters, Getters};
 use std::{
@@ -10,9 +11,12 @@ use std::{
 use typed_builder::TypedBuilder;
 use uuid::Uuid;
 
-const QUERY_DEFAULT_LIMIT: u32 = 10;
+type ResultCap = u32;
 
-const QUERY_MAX_LIMIT: u32 = 100;
+const QUERY_DEFAULT_LIMIT: ResultCap =
+    10;
+
+const QUERY_MAX_LIMIT: ResultCap = 100;
 
 macro_rules! unix_time_now {
     () => {
@@ -106,7 +110,7 @@ pub struct Query {
     status: Option<Status>,
     deadline: Option<String>,
     sort: Option<QuerySort>,
-    limit: Option<u32>,
+    limit: Option<ResultCap>,
 }
 impl Query {
     fn validate_limit(
@@ -386,10 +390,10 @@ impl TodoList {
             &query.deadline,
         )?;
 
-        let top_n: usize =
+        let top_n =
             query.validate_limit()?;
 
-        let mut filtered: Vec<_> = self.0
+        let filtered = self.0
             .values()
             .filter(|t| {
                 query.match_keyword(t) &&
@@ -397,17 +401,38 @@ impl TodoList {
                 query.match_status(t) &&
                 Query::match_deadline(&deadline, t)
             })
-            .cloned()
-            .collect();
+            .cloned();
 
-        filtered.sort_by_key(
-            SortBy::from(&query.sort),
-        );
+        let sort =
+            SortBy::from(&query.sort);
 
-        Ok(filtered
-            .into_iter()
-            .take(top_n)
-            .collect())
+        let mut heap =
+            BinaryHeap::with_capacity_by_key(
+                top_n,
+                &sort
+            );
+
+        let mut count: usize = 0;
+
+        for t in filtered {
+            if count < top_n {
+                heap.push(t);
+
+                count += 1;
+            } else if let Some(
+                mut todo,
+            ) =
+                heap.peek_mut()
+            {
+                if sort(&todo)
+                    > sort(&t)
+                {
+                    *todo = t;
+                }
+            }
+        }
+
+        Ok(heap.into_sorted_vec())
     }
 
     pub fn get(
