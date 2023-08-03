@@ -120,6 +120,8 @@ impl Query {
             .map(|n| {
                 if n > QUERY_MAX_LIMIT {
                     QUERY_MAX_LIMIT
+                } else if n < 1 {
+                    QUERY_DEFAULT_LIMIT
                 } else {
                     n
                 }
@@ -429,6 +431,8 @@ impl TodoList {
                 {
                     *todo = t;
                 }
+            } else {
+                unreachable!("DEFECT: Heap in `TodoList::search` is empty.");
             }
         }
 
@@ -463,14 +467,15 @@ impl TodoList {
             })
     }
 
-    pub fn delete_done_items(
+    pub fn delete_by_status(
         &mut self,
+        target_status: Status,
     ) -> u64 {
         let mut count: u64 = 0;
 
         self.0.retain(|_, item| {
             if item.status
-                == Status::Done
+                == target_status
             {
                 count += 1;
                 false
@@ -485,7 +490,7 @@ impl TodoList {
     pub fn delete_all(
         &mut self,
     ) -> usize {
-        let count = self.0.len();
+        let count = self.count();
 
         self.0.clear();
 
@@ -552,12 +557,14 @@ mod tests {
     }
 
     #[test]
-    fn todolist_delete_done_items_should_return_0_when_there_is_no_todos(
+    fn todolist_delete_by_status_should_return_0_when_there_is_no_todos(
     ) {
         let mut todos = TodoList::new();
 
         assert_eq!(
-            todos.delete_done_items(),
+            todos.delete_by_status(
+                Status::Done
+            ),
             0
         );
     }
