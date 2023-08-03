@@ -3,6 +3,7 @@ use crate::core::{
 };
 use binary_heap_plus::BinaryHeap;
 use chrono::Utc;
+use enum_iterator::Sequence;
 use getset::{CopyGetters, Getters};
 use std::{
     cmp, collections::HashMap,
@@ -33,6 +34,7 @@ macro_rules! unix_time_now {
     Hash,
     Ord,
     PartialOrd,
+    Sequence,
 )]
 pub enum Status {
     Backlog,
@@ -49,6 +51,7 @@ pub enum Status {
     Hash,
     Ord,
     PartialOrd,
+    Sequence,
 )]
 pub enum Priority {
     Low,
@@ -533,6 +536,7 @@ impl TodoList {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use enum_iterator::all;
     use maplit::hashset;
     use pretty_assertions::assert_eq;
     use std::collections::HashSet;
@@ -652,11 +656,9 @@ mod tests {
         );
     }
 
-    #[test]
-    fn todolist_search_should_return_matching_items_in_requested_order(
-    ) {
-        let mut todos = TodoList::new();
-
+    fn add_todos(
+        todos: &mut TodoList,
+    ) -> Vec<Todo> {
         let low_todo = NewTodo {
             title: "a".to_string(),
             priority: Priority::Low,
@@ -726,6 +728,100 @@ mod tests {
                 ..high_todo
             })
             .unwrap();
+
+        vec![
+            todo_a, todo_b, todo_c,
+            todo_d, todo_e, todo_f,
+            todo_g, todo_h, todo_i,
+        ]
+    }
+
+    #[test]
+    fn todolist_count_by_count_all_delete_all_should_all_work_as_expected(
+    ) {
+        let mut todos = TodoList::new();
+
+        add_todos(&mut todos);
+
+        assert_eq!(
+            todos.count_all(),
+            9
+        );
+
+        let all_priorities: Vec<_> =
+            all::<Priority>().collect();
+
+        for p in all_priorities {
+            assert_eq!(
+                todos
+                    .count_by(
+                        Query::builder(
+                        )
+                        .priority(Some(
+                            p
+                        ))
+                        .build()
+                    )
+                    .unwrap(),
+                3
+            );
+        }
+
+        assert_eq!(
+            todos.delete_all(),
+            9
+        );
+        assert_eq!(
+            todos.count_all(),
+            0
+        );
+    }
+
+    #[test]
+    fn todolist_search_should_return_matching_todos(
+    ) {
+        let mut todos = TodoList::new();
+
+        let items =
+            add_todos(&mut todos);
+        let [
+            _, _, _, _, _, _, todo_g, todo_h, todo_i
+        ] =
+            <[Todo; 9]>::try_from(items)
+                .expect("Vec doesn't have 9 elements!");
+
+        let actual = todos
+            .search(
+                Query::builder()
+                    .priority(Some(
+                        Priority::High,
+                    ))
+                    .build(),
+            )
+            .unwrap();
+
+        assert_eq!(
+            actual,
+            vec![
+                todo_g, todo_h, todo_i
+            ]
+        );
+    }
+
+    #[test]
+    fn todolist_search_should_return_todos_in_requested_order(
+    ) {
+        let mut todos = TodoList::new();
+
+        let items =
+            add_todos(&mut todos);
+        let [
+            todo_a, todo_b, todo_c,
+            todo_d, todo_e, todo_f,
+            todo_g, todo_h, todo_i
+        ] =
+            <[Todo; 9]>::try_from(items)
+                .expect("Vec doesn't have 9 elements!");
 
         // sort by priority
         let mut actual_highs = todos
