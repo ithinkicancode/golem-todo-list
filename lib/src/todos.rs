@@ -223,9 +223,13 @@ impl NewTodo {
 
 #[derive(TypedBuilder)]
 pub struct UpdateTodo {
+    #[builder(default)]
     title: Option<String>,
+    #[builder(default)]
     priority: Option<Priority>,
+    #[builder(default)]
     status: Option<Status>,
+    #[builder(default)]
     deadline: Option<String>,
 }
 impl UpdateTodo {
@@ -769,6 +773,85 @@ mod tests {
 
         assert_eq!(
             todos.delete_all(),
+            9
+        );
+        assert_eq!(
+            todos.count_all(),
+            0
+        );
+    }
+
+    #[test]
+    fn todolist_update_get_delete_by_status_should_all_work_as_expected(
+    ) {
+        let the_status = Status::Done;
+
+        let mut todos = TodoList::new();
+
+        let items =
+            add_todos(&mut todos);
+
+        for item in &items {
+            assert_eq!(
+                todos
+                    .get(&item.id)
+                    .unwrap(),
+                *item
+            )
+        }
+
+        let search_for_done_items =
+            Query::builder()
+                .status(Some(
+                    the_status,
+                ))
+                .build();
+
+        assert_eq!(
+            todos
+                .count_by(
+                    search_for_done_items.clone()
+                )
+                .unwrap(),
+            0
+        );
+
+        for item in &items {
+            let update =
+                UpdateTodo::builder()
+                    .status(Some(
+                        the_status,
+                    ))
+                    .build();
+            let updated = todos
+                .update(
+                    item.id.clone(),
+                    update,
+                )
+                .unwrap();
+
+            assert_eq!(
+                updated,
+                Todo {
+                    status: the_status,
+                    ..item.clone()
+                }
+            )
+        }
+
+        assert_eq!(
+            todos
+                .count_by(
+                    search_for_done_items
+                )
+                .unwrap(),
+            9
+        );
+
+        assert_eq!(
+            todos.delete_by_status(
+                the_status
+            ),
             9
         );
         assert_eq!(
