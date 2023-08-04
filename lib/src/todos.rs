@@ -720,12 +720,13 @@ mod tests {
     ) {
         let mut todos = TodoList::new();
 
-        let v1 = todos.add(
-            &NewTodo::builder()
-            .title("abc".to_string())
-            .priority(Priority::Medium)
-            .build()
-        ).unwrap();
+        let v1 = todos
+            .add(
+                &NewTodo::builder()
+                    .title("abc".to_string())
+                    .priority(Priority::Medium)
+                    .build()
+            ).unwrap();
 
         let update =
             UpdateTodo::builder()
