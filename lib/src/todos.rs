@@ -67,7 +67,7 @@ pub enum QuerySort {
 }
 
 #[derive(
-    Ord, Eq, PartialEq, PartialOrd,
+    Eq, PartialEq, Ord, PartialOrd,
 )]
 enum SortBy {
     Deadline(cmp::Reverse<Option<i64>>),
@@ -106,9 +106,7 @@ impl SortBy {
     }
 }
 
-#[derive(
-    Clone, Default, TypedBuilder,
-)]
+#[derive(Default, TypedBuilder)]
 pub struct Query {
     #[builder(default)]
     keyword: Option<String>,
