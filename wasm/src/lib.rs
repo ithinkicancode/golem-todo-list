@@ -162,8 +162,12 @@ impl Api for Todos {
         with_app_state(|AppState(todos)| todos.delete(&id))
     }
 
-    fn delete_done_items() -> u64 {
-        with_app_state(|AppState(todos)| todos.delete_by_status(todos::Status::Done))
+    fn delete_done_items() -> AppResult<u64> {
+        with_app_state(|AppState(todos)| {
+            let count = todos.delete_by_status(todos::Status::Done);
+
+            u64_from(count)
+        })
     }
 
     fn delete_all() -> AppResult<u64> {

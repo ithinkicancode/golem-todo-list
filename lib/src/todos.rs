@@ -509,8 +509,8 @@ impl TodoList {
     pub fn delete_by_status(
         &mut self,
         target_status: Status,
-    ) -> u64 {
-        let mut count: u64 = 0;
+    ) -> usize {
+        let mut count = 0;
 
         self.0.retain(|_, item| {
             if item.status
@@ -739,28 +739,28 @@ mod tests {
     ) {
         let mut todos = TodoList::new();
 
-        let _ = add_todos(&mut todos)
-            .unwrap();
+        let items =
+            add_todos(&mut todos)
+                .unwrap();
+        let count = items.len();
 
         assert_eq!(
             todos.count_all(),
-            9
+            count
         );
 
         let all_priorities: Vec<_> =
             all::<Priority>().collect();
 
         for p in all_priorities {
+            let query =
+                Query::builder()
+                    .priority(Some(p))
+                    .build();
+
             assert_eq!(
                 todos
-                    .count_by(
-                        Query::builder(
-                        )
-                        .priority(Some(
-                            p
-                        ))
-                        .build()
-                    )
+                    .count_by(query)
                     .unwrap(),
                 3
             );
@@ -768,7 +768,7 @@ mod tests {
 
         assert_eq!(
             todos.delete_all(),
-            9
+            count
         );
         assert_eq!(
             todos.count_all(),
@@ -786,6 +786,7 @@ mod tests {
         let items =
             add_todos(&mut todos)
                 .unwrap();
+        let count = items.len();
 
         for item in &items {
             assert_eq!(
@@ -841,14 +842,14 @@ mod tests {
                     search_for_done_items
                 )
                 .unwrap(),
-            9
+            count
         );
 
         assert_eq!(
             todos.delete_by_status(
                 the_status
             ),
-            9
+            count
         );
         assert_eq!(
             todos.count_all(),

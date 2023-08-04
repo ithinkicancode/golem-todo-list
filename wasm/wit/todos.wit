@@ -73,7 +73,7 @@ interface api {
 
   delete: func(id: string) -> result<_, string>
 
-  delete-done-items: func() -> u64
+  delete-done-items: func() -> result<u64, string>
 
   delete-all: func() -> result<u64, string>
 
