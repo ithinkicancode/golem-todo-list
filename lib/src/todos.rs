@@ -282,12 +282,12 @@ pub struct TodoList(
 );
 impl TodoList {
     pub fn new() -> Self {
-        Default::default()
+        Self::default()
     }
 
     pub fn add(
         &mut self,
-        item: NewTodo,
+        item: &NewTodo,
     ) -> AppResult<Todo> {
         let deadline = unix_time_from(
             &item.deadline,
@@ -302,7 +302,7 @@ impl TodoList {
 
         let now = unix_time_now!();
 
-        let item = Todo {
+        let todo = Todo {
             id,
             title,
             priority: item.priority,
@@ -312,11 +312,11 @@ impl TodoList {
             updated_timestamp: now,
         };
 
-        let result = item.clone();
+        let result = todo.clone();
 
         self.0.insert(
-            item.id.clone(),
-            item,
+            todo.id.clone(),
+            todo,
         );
 
         Ok(result)
@@ -324,8 +324,8 @@ impl TodoList {
 
     pub fn update(
         &mut self,
-        id: String,
-        change: UpdateTodo,
+        id: &str,
+        change: &UpdateTodo,
     ) -> AppResult<Todo> {
         if change.change_is_present() {
             let deadline_update =
@@ -334,14 +334,14 @@ impl TodoList {
                 )?;
 
             if let Some(todo) =
-                self.0.get_mut(&id)
+                self.0.get_mut(id)
             {
                 let mut modified =
                     false;
 
                 if let Some(
                     title_update,
-                ) = change.title
+                ) = &change.title
                 {
                     let title_update =
                         title_update
@@ -404,7 +404,7 @@ impl TodoList {
     fn filter_by<'a>(
         &'a self,
         query: &'a Query,
-        deadline: Option<i64>,
+        deadline: &'a Option<i64>,
     ) -> impl Iterator<Item = &Todo>
     {
         self.0
@@ -413,13 +413,13 @@ impl TodoList {
                 query.match_keyword(t) &&
                 query.match_priority(t) &&
                 query.match_status(t) &&
-                Query::match_deadline(&deadline, t)
+                Query::match_deadline(deadline, t)
             })
     }
 
     pub fn search(
         &self,
-        query: Query,
+        query: &Query,
     ) -> AppResult<Vec<Todo>> {
         let deadline = unix_time_from(
             &query.deadline,
@@ -440,7 +440,7 @@ impl TodoList {
         let mut count: usize = 0;
 
         for t in self
-            .filter_by(&query, deadline)
+            .filter_by(query, &deadline)
         {
             if count < top_n {
                 heap.push(t.clone());
@@ -465,14 +465,14 @@ impl TodoList {
 
     pub fn count_by(
         &self,
-        query: Query,
+        query: &Query,
     ) -> AppResult<usize> {
         let deadline = unix_time_from(
             &query.deadline,
         )?;
 
         let count = self
-            .filter_by(&query, deadline)
+            .filter_by(query, &deadline)
             .count();
 
         Ok(count)
@@ -508,13 +508,13 @@ impl TodoList {
 
     pub fn delete_by_status(
         &mut self,
-        target_status: Status,
+        target_status: &Status,
     ) -> usize {
         let mut count = 0;
 
         self.0.retain(|_, item| {
             if item.status
-                == target_status
+                == *target_status
             {
                 count += 1;
                 false
@@ -547,7 +547,7 @@ mod tests {
 
     impl Query {
         fn empty() -> Self {
-            Default::default()
+            Self::default()
         }
     }
 
@@ -557,7 +557,7 @@ mod tests {
         let todos = TodoList::new();
 
         assert!(todos
-            .search(Query::empty())
+            .search(&Query::empty())
             .unwrap()
             .is_empty());
     }
@@ -608,7 +608,7 @@ mod tests {
 
         assert_eq!(
             todos.delete_by_status(
-                Status::Done
+                &Status::Done
             ),
             0
         );
@@ -640,7 +640,7 @@ mod tests {
         };
 
         let actual =
-            todos.add(item).unwrap();
+            todos.add(&item).unwrap();
 
         assert_eq!(actual.title, title);
         assert_eq!(
@@ -670,14 +670,14 @@ mod tests {
         };
 
         let todo_a = todos
-            .add(low_todo.clone())?;
+            .add(&low_todo.clone())?;
         let todo_b =
-            todos.add(NewTodo {
+            todos.add(&NewTodo {
                 title: "b".to_string(),
                 ..low_todo.clone()
             })?;
         let todo_c =
-            todos.add(NewTodo {
+            todos.add(&NewTodo {
                 title: "c".to_string(),
                 ..low_todo.clone()
             })?;
@@ -688,17 +688,17 @@ mod tests {
         };
 
         let todo_d =
-            todos.add(NewTodo {
+            todos.add(&NewTodo {
                 title: "d".to_string(),
                 ..med_todo.clone()
             })?;
         let todo_e =
-            todos.add(NewTodo {
+            todos.add(&NewTodo {
                 title: "e".to_string(),
                 ..med_todo.clone()
             })?;
         let todo_f =
-            todos.add(NewTodo {
+            todos.add(&NewTodo {
                 title: "f".to_string(),
                 ..med_todo.clone()
             })?;
@@ -709,17 +709,17 @@ mod tests {
         };
 
         let todo_g =
-            todos.add(NewTodo {
+            todos.add(&NewTodo {
                 title: "g".to_string(),
                 ..high_todo.clone()
             })?;
         let todo_h =
-            todos.add(NewTodo {
+            todos.add(&NewTodo {
                 title: "h".to_string(),
                 ..high_todo.clone()
             })?;
         let todo_i =
-            todos.add(NewTodo {
+            todos.add(&NewTodo {
                 title: "i".to_string(),
                 ..high_todo
             })?;
@@ -759,7 +759,7 @@ mod tests {
 
             assert_eq!(
                 todos
-                    .count_by(query)
+                    .count_by(&query)
                     .unwrap(),
                 3
             );
@@ -806,7 +806,7 @@ mod tests {
         assert_eq!(
             todos
                 .count_by(
-                    search_for_done_items.clone()
+                    &search_for_done_items
                 )
                 .unwrap(),
             0
@@ -821,8 +821,7 @@ mod tests {
                     .build();
             let updated = todos
                 .update(
-                    item.id.clone(),
-                    update,
+                    &item.id, &update,
                 )
                 .unwrap();
 
@@ -838,7 +837,7 @@ mod tests {
         assert_eq!(
             todos
                 .count_by(
-                    search_for_done_items
+                    &search_for_done_items
                 )
                 .unwrap(),
             count
@@ -846,7 +845,7 @@ mod tests {
 
         assert_eq!(
             todos.delete_by_status(
-                the_status
+                &the_status
             ),
             count
         );
@@ -872,7 +871,7 @@ mod tests {
 
         let actual = todos
             .search(
-                Query::builder()
+                &Query::builder()
                     .priority(Some(
                         Priority::High,
                     ))
@@ -907,7 +906,7 @@ mod tests {
         // sort by priority
         let mut actual_highs = todos
             .search(
-                Query::builder()
+                &Query::builder()
                     .limit(Some(5))
                     .sort(Some(QuerySort::Priority))
                     .build()
@@ -950,7 +949,7 @@ mod tests {
         // sort by title alphabetically
         let actual = todos
             .search(
-                Query::builder()
+                &Query::builder()
                     .limit(Some(5))
                     .build(),
             )

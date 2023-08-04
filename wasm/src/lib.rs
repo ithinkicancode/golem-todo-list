@@ -114,7 +114,7 @@ struct Todos;
 impl Api for Todos {
     fn add(item: NewTodo) -> AppResult<Todo> {
         with_app_state(|AppState(todos)| {
-            let result = todos.add(new_todo_from_incoming(item))?;
+            let result = todos.add(&new_todo_from_incoming(item))?;
 
             Ok(todo_for_outgoing(result))
         })
@@ -122,7 +122,7 @@ impl Api for Todos {
 
     fn update(id: String, change: UpdateTodo) -> AppResult<Todo> {
         with_app_state(|AppState(todos)| {
-            let result = todos.update(id, update_todo_from_incoming(change))?;
+            let result = todos.update(&id, &update_todo_from_incoming(change))?;
 
             Ok(todo_for_outgoing(result))
         })
@@ -130,7 +130,7 @@ impl Api for Todos {
 
     fn search(query: Query) -> AppResult<Vec<Todo>> {
         with_app_state(|AppState(todos)| {
-            let found = todos.search(query_from_incoming(query))?;
+            let found = todos.search(&query_from_incoming(query))?;
 
             let result = found.into_iter().map(todo_for_outgoing).collect();
 
@@ -140,7 +140,7 @@ impl Api for Todos {
 
     fn count_by(filter: Filter) -> AppResult<u64> {
         with_app_state(|AppState(todos)| {
-            let count = todos.count_by(filter_from_incoming(filter))?;
+            let count = todos.count_by(&filter_from_incoming(filter))?;
 
             u64_from(count)
         })
@@ -164,7 +164,7 @@ impl Api for Todos {
 
     fn delete_done_items() -> AppResult<u64> {
         with_app_state(|AppState(todos)| {
-            let count = todos.delete_by_status(todos::Status::Done);
+            let count = todos.delete_by_status(&todos::Status::Done);
 
             u64_from(count)
         })
