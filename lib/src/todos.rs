@@ -300,7 +300,7 @@ impl TodoList {
         let id =
             Uuid::new_v4().to_string();
 
-        let now: i64 = unix_time_now!();
+        let now = unix_time_now!();
 
         let item = Todo {
             id,
@@ -662,7 +662,7 @@ mod tests {
 
     fn add_todos(
         todos: &mut TodoList,
-    ) -> Vec<Todo> {
+    ) -> AppResult<Vec<Todo>> {
         let low_todo = NewTodo {
             title: "a".to_string(),
             priority: Priority::Low,
@@ -672,72 +672,66 @@ mod tests {
         let todo_a = todos
             .add(low_todo.clone())
             .unwrap();
-        let todo_b = todos
-            .add(NewTodo {
+        let todo_b =
+            todos.add(NewTodo {
                 title: "b".to_string(),
                 ..low_todo.clone()
-            })
-            .unwrap();
-        let todo_c = todos
-            .add(NewTodo {
+            })?;
+        let todo_c =
+            todos.add(NewTodo {
                 title: "c".to_string(),
                 ..low_todo.clone()
-            })
-            .unwrap();
+            })?;
 
         let med_todo = NewTodo {
             priority: Priority::Medium,
             ..low_todo
         };
 
-        let todo_d = todos
-            .add(NewTodo {
+        let todo_d =
+            todos.add(NewTodo {
                 title: "d".to_string(),
                 ..med_todo.clone()
-            })
-            .unwrap();
-        let todo_e = todos
-            .add(NewTodo {
+            })?;
+        let todo_e =
+            todos.add(NewTodo {
                 title: "e".to_string(),
                 ..med_todo.clone()
-            })
-            .unwrap();
-        let todo_f = todos
-            .add(NewTodo {
+            })?;
+        let todo_f =
+            todos.add(NewTodo {
                 title: "f".to_string(),
                 ..med_todo.clone()
-            })
-            .unwrap();
+            })?;
 
         let high_todo = NewTodo {
             priority: Priority::High,
             ..med_todo
         };
 
-        let todo_g = todos
-            .add(NewTodo {
+        let todo_g =
+            todos.add(NewTodo {
                 title: "g".to_string(),
                 ..high_todo.clone()
-            })
-            .unwrap();
-        let todo_h = todos
-            .add(NewTodo {
+            })?;
+        let todo_h =
+            todos.add(NewTodo {
                 title: "h".to_string(),
                 ..high_todo.clone()
-            })
-            .unwrap();
-        let todo_i = todos
-            .add(NewTodo {
+            })?;
+        let todo_i =
+            todos.add(NewTodo {
                 title: "i".to_string(),
                 ..high_todo
-            })
-            .unwrap();
+            })?;
 
-        vec![
+        let result = vec![
             todo_a, todo_b, todo_c,
             todo_d, todo_e, todo_f,
             todo_g, todo_h, todo_i,
-        ]
+        ];
+
+        Ok(result)
     }
 
     #[test]
@@ -745,7 +739,8 @@ mod tests {
     ) {
         let mut todos = TodoList::new();
 
-        add_todos(&mut todos);
+        let _ = add_todos(&mut todos)
+            .unwrap();
 
         assert_eq!(
             todos.count_all(),
@@ -789,7 +784,8 @@ mod tests {
         let mut todos = TodoList::new();
 
         let items =
-            add_todos(&mut todos);
+            add_todos(&mut todos)
+                .unwrap();
 
         for item in &items {
             assert_eq!(
@@ -866,7 +862,8 @@ mod tests {
         let mut todos = TodoList::new();
 
         let items =
-            add_todos(&mut todos);
+            add_todos(&mut todos)
+                .unwrap();
         let [
             _, _, _, _, _, _, todo_g, todo_h, todo_i
         ] =
@@ -897,7 +894,8 @@ mod tests {
         let mut todos = TodoList::new();
 
         let items =
-            add_todos(&mut todos);
+            add_todos(&mut todos)
+                .unwrap();
         let [
             todo_a, todo_b, todo_c,
             todo_d, todo_e, todo_f,
