@@ -682,13 +682,14 @@ mod tests {
     ) {
         let mut todos = TodoList::new();
 
-        let actual = todos.add(
-            &NewTodo::builder()
-            .title("abc".to_string())
-            .priority(Priority::Medium)
-            .deadline(Some("abc".to_string()))
-            .build()
-        ).unwrap_err();
+        let actual = todos
+            .add(
+                &NewTodo::builder()
+                    .title("abc".to_string())
+                    .priority(Priority::Medium)
+                    .deadline(Some("abc".to_string()))
+                    .build()
+            ).unwrap_err();
 
         assert!(actual.contains(
             INVALID_DATE_TIME_FORMAT
@@ -700,12 +701,13 @@ mod tests {
     ) {
         let mut todos = TodoList::new();
 
-        let actual = todos.add(
-            &NewTodo::builder()
-            .title("".to_string())
-            .priority(Priority::Medium)
-            .build()
-        ).unwrap_err();
+        let actual = todos
+            .add(
+                &NewTodo::builder()
+                    .title("".to_string())
+                    .priority(Priority::Medium)
+                    .build()
+            ).unwrap_err();
 
         assert_eq!(
             actual,
@@ -754,12 +756,13 @@ mod tests {
     ) {
         let mut todos = TodoList::new();
 
-        let v1 = todos.add(
-            &NewTodo::builder()
-            .title("abc".to_string())
-            .priority(Priority::Medium)
-            .build()
-        ).unwrap();
+        let v1 = todos
+            .add(
+                &NewTodo::builder()
+                    .title("abc".to_string())
+                    .priority(Priority::Medium)
+                    .build()
+            ).unwrap();
 
         let update =
             UpdateTodo::builder()
@@ -779,12 +782,13 @@ mod tests {
     ) {
         let mut todos = TodoList::new();
 
-        let v1 = todos.add(
-            &NewTodo::builder()
-            .title("abc".to_string())
-            .priority(Priority::Medium)
-            .build()
-        ).unwrap();
+        let v1 = todos
+            .add(
+                &NewTodo::builder()
+                    .title("abc".to_string())
+                    .priority(Priority::Medium)
+                    .build()
+            ).unwrap();
 
         let update =
             UpdateTodo::builder()
