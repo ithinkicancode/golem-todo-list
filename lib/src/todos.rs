@@ -670,8 +670,7 @@ mod tests {
         };
 
         let todo_a = todos
-            .add(low_todo.clone())
-            .unwrap();
+            .add(low_todo.clone())?;
         let todo_b =
             todos.add(NewTodo {
                 title: "b".to_string(),
