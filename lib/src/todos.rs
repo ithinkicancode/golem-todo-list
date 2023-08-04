@@ -549,6 +549,19 @@ mod tests {
         }
     }
 
+    impl NewTodo {
+        fn cloned_with_title(
+            &self,
+            title: &str,
+        ) -> Self {
+            Self {
+                title: title
+                    .to_string(),
+                ..self.clone()
+            }
+        }
+    }
+
     #[test]
     fn todolist_search_should_return_empty_vec_when_there_is_no_todos(
     ) {
@@ -669,58 +682,51 @@ mod tests {
 
         let todo_a = todos
             .add(&low_todo.clone())?;
-        let todo_b =
-            todos.add(&NewTodo {
-                title: "b".to_string(),
-                ..low_todo.clone()
-            })?;
-        let todo_c =
-            todos.add(&NewTodo {
-                title: "c".to_string(),
-                ..low_todo.clone()
-            })?;
+
+        let todo_b = todos.add(
+            &low_todo
+                .cloned_with_title("b"),
+        )?;
+        let todo_c = todos.add(
+            &low_todo
+                .cloned_with_title("c"),
+        )?;
 
         let med_todo = NewTodo {
             priority: Priority::Medium,
             ..low_todo
         };
 
-        let todo_d =
-            todos.add(&NewTodo {
-                title: "d".to_string(),
-                ..med_todo.clone()
-            })?;
-        let todo_e =
-            todos.add(&NewTodo {
-                title: "e".to_string(),
-                ..med_todo.clone()
-            })?;
-        let todo_f =
-            todos.add(&NewTodo {
-                title: "f".to_string(),
-                ..med_todo.clone()
-            })?;
+        let todo_d = todos.add(
+            &med_todo
+                .cloned_with_title("d"),
+        )?;
+        let todo_e = todos.add(
+            &med_todo
+                .cloned_with_title("e"),
+        )?;
+        let todo_f = todos.add(
+            &med_todo
+                .cloned_with_title("f"),
+        )?;
 
         let high_todo = NewTodo {
             priority: Priority::High,
             ..med_todo
         };
 
-        let todo_g =
-            todos.add(&NewTodo {
-                title: "g".to_string(),
-                ..high_todo.clone()
-            })?;
-        let todo_h =
-            todos.add(&NewTodo {
-                title: "h".to_string(),
-                ..high_todo.clone()
-            })?;
-        let todo_i =
-            todos.add(&NewTodo {
-                title: "i".to_string(),
-                ..high_todo
-            })?;
+        let todo_g = todos.add(
+            &high_todo
+                .cloned_with_title("g"),
+        )?;
+        let todo_h = todos.add(
+            &high_todo
+                .cloned_with_title("h"),
+        )?;
+        let todo_i = todos.add(
+            &high_todo
+                .cloned_with_title("i"),
+        )?;
 
         let result = vec![
             todo_a, todo_b, todo_c,
@@ -867,19 +873,20 @@ mod tests {
             <[Todo; 9]>::try_from(items)
                 .expect("Vec doesn't have 9 elements!");
 
-        let actual = todos
-            .search(
-                &Query::builder()
-                    .priority(Some(
-                        Priority::High,
-                    ))
-                    .build(),
-            )
-            .unwrap();
+        let query = Query::builder()
+            .priority(Some(
+                Priority::High,
+            ))
+            .build();
+        let actual: HashSet<_> = todos
+            .search(&query)
+            .unwrap()
+            .into_iter()
+            .collect();
 
         assert_eq!(
             actual,
-            vec![
+            hashset![
                 todo_g, todo_h, todo_i
             ]
         );
