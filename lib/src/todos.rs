@@ -203,19 +203,20 @@ pub struct NewTodo {
     deadline: Option<String>,
 }
 impl NewTodo {
+    const ERROR_EMPTY_TITLE: &str =
+        "Title cannot be empty.";
+
     fn validate_title(
         &self,
     ) -> AppResult<&str> {
         let title = self.title.trim();
 
         if title.is_empty() {
-            return Err(
-                "Title cannot be empty"
-                    .to_string(),
-            );
+            Err(Self::ERROR_EMPTY_TITLE
+                .to_string())
+        } else {
+            Ok(title)
         }
-
-        Ok(title)
     }
 }
 
@@ -279,6 +280,9 @@ pub struct TodoList(
     HashMap<String, Todo>,
 );
 impl TodoList {
+    const NO_CHANGE_PROVIDED: &str =
+        "At least one change must be present.";
+
     pub fn new() -> Self {
         Self::default()
     }
@@ -392,10 +396,11 @@ impl TodoList {
 
                 Ok(todo.clone())
             } else {
-                Err(item_not_found(&id))
+                Err(item_not_found(id))
             }
         } else {
-            Err("At least one change must be present.".to_string())
+            Err(Self::NO_CHANGE_PROVIDED
+                .to_string())
         }
     }
 
@@ -538,6 +543,7 @@ impl TodoList {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::INVALID_DATE_TIME_FORMAT;
     use enum_iterator::all;
     use maplit::hashset;
     use pretty_assertions::assert_eq;
@@ -669,6 +675,131 @@ mod tests {
             todos.count_all(),
             1
         );
+    }
+
+    #[test]
+    fn todolist_add_should_fail_when_deadline_is_invalid(
+    ) {
+        let mut todos = TodoList::new();
+
+        let actual = todos.add(
+            &NewTodo::builder()
+            .title("abc".to_string())
+            .priority(Priority::Medium)
+            .deadline(Some("abc".to_string()))
+            .build()
+        ).unwrap_err();
+
+        assert!(actual.contains(
+            INVALID_DATE_TIME_FORMAT
+        ));
+    }
+
+    #[test]
+    fn todolist_add_should_fail_when_title_is_empty(
+    ) {
+        let mut todos = TodoList::new();
+
+        let actual = todos.add(
+            &NewTodo::builder()
+            .title("".to_string())
+            .priority(Priority::Medium)
+            .build()
+        ).unwrap_err();
+
+        assert_eq!(
+            actual,
+            NewTodo::ERROR_EMPTY_TITLE
+        )
+    }
+
+    #[test]
+    fn todolist_update_should_return_updated_todo(
+    ) {
+        let mut todos = TodoList::new();
+
+        let v1 = todos.add(
+            &NewTodo::builder()
+            .title("abc".to_string())
+            .priority(Priority::Medium)
+            .build()
+        ).unwrap();
+
+        let update =
+            UpdateTodo::builder()
+                .title(Some(
+                    "abc".to_string(),
+                ))
+                .priority(Some(
+                    Priority::High,
+                ))
+                .deadline(Some(
+                    "2022-01-01 19"
+                        .to_string(),
+                ))
+                .build();
+
+        let v2 = todos
+            .update(&v1.id, &update)
+            .unwrap();
+
+        let item =
+            todos.get(&v1.id).unwrap();
+
+        assert_eq!(v2, item);
+    }
+
+    #[test]
+    fn todolist_update_should_fail_when_no_change_is_provided(
+    ) {
+        let mut todos = TodoList::new();
+
+        let v1 = todos.add(
+            &NewTodo::builder()
+            .title("abc".to_string())
+            .priority(Priority::Medium)
+            .build()
+        ).unwrap();
+
+        let update =
+            UpdateTodo::builder()
+                .build();
+
+        let actual = todos
+            .update(&v1.id, &update)
+            .unwrap_err();
+
+        assert!(actual.contains(
+            TodoList::NO_CHANGE_PROVIDED
+        ));
+    }
+
+    #[test]
+    fn todolist_update_should_fail_when_deadline_is_invalid(
+    ) {
+        let mut todos = TodoList::new();
+
+        let v1 = todos.add(
+            &NewTodo::builder()
+            .title("abc".to_string())
+            .priority(Priority::Medium)
+            .build()
+        ).unwrap();
+
+        let update =
+            UpdateTodo::builder()
+                .deadline(Some(
+                    "xyz".to_string(),
+                ))
+                .build();
+
+        let actual = todos
+            .update(&v1.id, &update)
+            .unwrap_err();
+
+        assert!(actual.contains(
+            INVALID_DATE_TIME_FORMAT
+        ));
     }
 
     fn add_todos(
@@ -966,5 +1097,45 @@ mod tests {
         ];
 
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn todolist_search_should_fail_when_deadline_is_invalid(
+    ) {
+        let todos = TodoList::new();
+
+        let query = Query::builder()
+            .deadline(Some(
+                "abc".to_string(),
+            ))
+            .build();
+
+        let actual = todos
+            .search(&query)
+            .unwrap_err();
+
+        assert!(actual.contains(
+            INVALID_DATE_TIME_FORMAT
+        ));
+    }
+
+    #[test]
+    fn todolist_count_by_should_fail_when_deadline_is_invalid(
+    ) {
+        let todos = TodoList::new();
+
+        let query = Query::builder()
+            .deadline(Some(
+                "abc".to_string(),
+            ))
+            .build();
+
+        let actual = todos
+            .count_by(&query)
+            .unwrap_err();
+
+        assert!(actual.contains(
+            INVALID_DATE_TIME_FORMAT
+        ));
     }
 }

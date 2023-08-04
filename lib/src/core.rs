@@ -4,6 +4,9 @@ use once_cell::sync::Lazy;
 pub type AppResult<T> =
     Result<T, String>;
 
+pub(crate) const INVALID_DATE_TIME_FORMAT: &str =
+    "is NOT in the required format of";
+
 const USER_DATE_TIME_FORMAT: &str =
     "%Y-%m-%d %H";
 
@@ -36,8 +39,9 @@ pub(crate) fn unix_time_from(
             )
             .map_err(|e| {
                 format!(
-                    "ERROR: '{}' is NOT in the required format of '{}': {:?}.",
+                    "ERROR: '{}' {} '{}': {:?}.",
                     s,
+                    INVALID_DATE_TIME_FORMAT,
                     USER_DATE_TIME_FORMAT,
                     e.to_string()
                 )
@@ -98,8 +102,8 @@ mod tests {
         )
         .unwrap_err();
 
-        assert!(
-            actual.contains("is NOT in the required format of"),
-        )
+        assert!(actual.contains(
+            INVALID_DATE_TIME_FORMAT
+        ),)
     }
 }
