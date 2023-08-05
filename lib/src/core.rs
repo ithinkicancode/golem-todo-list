@@ -104,6 +104,6 @@ mod tests {
 
         assert!(actual.contains(
             INVALID_DATE_TIME_FORMAT
-        ),)
+        ))
     }
 }

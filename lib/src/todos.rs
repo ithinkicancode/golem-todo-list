@@ -110,14 +110,19 @@ impl SortBy {
 pub struct Query {
     #[builder(default)]
     keyword: Option<String>,
+
     #[builder(default)]
     priority: Option<Priority>,
+
     #[builder(default)]
     status: Option<Status>,
+
     #[builder(default)]
     deadline: Option<String>,
+
     #[builder(default)]
     sort: Option<QuerySort>,
+
     #[builder(default)]
     limit: Option<ResultCap>,
 }
@@ -198,7 +203,9 @@ impl Query {
 #[derive(Clone, TypedBuilder)]
 pub struct NewTodo {
     title: String,
+
     priority: Priority,
+
     #[builder(default)]
     deadline: Option<String>,
 }
@@ -224,10 +231,13 @@ impl NewTodo {
 pub struct UpdateTodo {
     #[builder(default)]
     title: Option<String>,
+
     #[builder(default)]
     priority: Option<Priority>,
+
     #[builder(default)]
     status: Option<Status>,
+
     #[builder(default)]
     deadline: Option<String>,
 }
@@ -254,16 +264,22 @@ impl UpdateTodo {
 pub struct Todo {
     #[getset(get = "pub")]
     id: String,
+
     #[getset(get = "pub")]
     title: String,
+
     #[getset(get_copy = "pub")]
     priority: Priority,
+
     #[getset(get_copy = "pub")]
     status: Status,
+
     #[getset(get_copy = "pub")]
     created_timestamp: i64,
+
     #[getset(get_copy = "pub")]
     updated_timestamp: i64,
+
     #[getset(get_copy = "pub")]
     deadline: Option<i64>,
 }
