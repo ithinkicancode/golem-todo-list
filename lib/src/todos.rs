@@ -680,10 +680,7 @@ mod tests {
     #[test]
     fn todolist_add_should_fail_when_deadline_is_invalid(
     ) {
-        let mut todos =
-            new_todo_list!();
-
-        let actual = todos
+        let actual = new_todo_list!()
             .add(
                 &NewTodo::builder()
                     .title("abc".to_string())
