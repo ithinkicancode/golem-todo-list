@@ -549,6 +549,12 @@ mod tests {
     use pretty_assertions::assert_eq;
     use std::collections::HashSet;
 
+    macro_rules! new_todo_list {
+        () => {
+            TodoList::new()
+        };
+    }
+
     impl Query {
         fn empty() -> Self {
             Self::default()
@@ -571,9 +577,7 @@ mod tests {
     #[test]
     fn todolist_search_should_return_empty_vec_when_there_is_no_todos(
     ) {
-        let todos = TodoList::new();
-
-        assert!(todos
+        assert!(new_todo_list!()
             .search(&Query::empty())
             .unwrap()
             .is_empty());
@@ -582,12 +586,12 @@ mod tests {
     #[test]
     fn todolist_get_should_fail_when_there_is_no_todos(
     ) {
-        let todos = TodoList::new();
-
         let id = "not-exist";
 
         assert_eq!(
-            todos.get(id).unwrap_err(),
+            new_todo_list!()
+                .get(id)
+                .unwrap_err(),
             item_not_found(id)
         );
     }
@@ -595,10 +599,9 @@ mod tests {
     #[test]
     fn todolist_count_should_be_0_when_there_is_no_todos(
     ) {
-        let todos = TodoList::new();
-
         assert_eq!(
-            todos.count_all(),
+            new_todo_list!()
+                .count_all(),
             0
         );
     }
@@ -606,12 +609,10 @@ mod tests {
     #[test]
     fn todolist_delete_should_fail_when_there_is_no_todos(
     ) {
-        let mut todos = TodoList::new();
-
         let id = "not-exist";
 
         assert_eq!(
-            todos
+            new_todo_list!()
                 .delete(id)
                 .unwrap_err(),
             item_not_found(id)
@@ -621,12 +622,11 @@ mod tests {
     #[test]
     fn todolist_delete_by_status_should_return_0_when_there_is_no_todos(
     ) {
-        let mut todos = TodoList::new();
-
         assert_eq!(
-            todos.delete_by_status(
-                &Status::Done
-            ),
+            new_todo_list!()
+                .delete_by_status(
+                    &Status::Done
+                ),
             0
         );
     }
@@ -634,10 +634,9 @@ mod tests {
     #[test]
     fn todolist_delete_all_should_return_0_when_there_is_no_todos(
     ) {
-        let mut todos = TodoList::new();
-
         assert_eq!(
-            todos.delete_all(),
+            new_todo_list!()
+                .delete_all(),
             0
         );
     }
@@ -645,7 +644,8 @@ mod tests {
     #[test]
     fn todolist_add_should_return_newly_created_todo(
     ) {
-        let mut todos = TodoList::new();
+        let mut todos =
+            new_todo_list!();
 
         let title = "test";
         let priority = Priority::Medium;
@@ -680,7 +680,8 @@ mod tests {
     #[test]
     fn todolist_add_should_fail_when_deadline_is_invalid(
     ) {
-        let mut todos = TodoList::new();
+        let mut todos =
+            new_todo_list!();
 
         let actual = todos
             .add(
@@ -699,9 +700,7 @@ mod tests {
     #[test]
     fn todolist_add_should_fail_when_title_is_empty(
     ) {
-        let mut todos = TodoList::new();
-
-        let actual = todos
+        let actual = new_todo_list!()
             .add(
                 &NewTodo::builder()
                     .title("".to_string())
@@ -718,7 +717,8 @@ mod tests {
     #[test]
     fn todolist_update_should_return_updated_todo(
     ) {
-        let mut todos = TodoList::new();
+        let mut todos =
+            new_todo_list!();
 
         let v1 = todos
             .add(
@@ -755,7 +755,8 @@ mod tests {
     #[test]
     fn todolist_update_should_fail_when_no_change_is_provided(
     ) {
-        let mut todos = TodoList::new();
+        let mut todos =
+            new_todo_list!();
 
         let v1 = todos
             .add(
@@ -781,7 +782,8 @@ mod tests {
     #[test]
     fn todolist_update_should_fail_when_deadline_is_invalid(
     ) {
-        let mut todos = TodoList::new();
+        let mut todos =
+            new_todo_list!();
 
         let v1 = todos
             .add(
@@ -876,7 +878,8 @@ mod tests {
     #[test]
     fn todolist_count_by_count_all_delete_all_should_all_work_as_expected(
     ) {
-        let mut todos = TodoList::new();
+        let mut todos =
+            new_todo_list!();
 
         let items =
             add_todos(&mut todos)
@@ -920,7 +923,8 @@ mod tests {
     ) {
         let the_status = Status::Done;
 
-        let mut todos = TodoList::new();
+        let mut todos =
+            new_todo_list!();
 
         let items =
             add_todos(&mut todos)
@@ -998,7 +1002,8 @@ mod tests {
     #[test]
     fn todolist_search_should_return_matching_todos(
     ) {
-        let mut todos = TodoList::new();
+        let mut todos =
+            new_todo_list!();
 
         let items =
             add_todos(&mut todos)
@@ -1031,7 +1036,8 @@ mod tests {
     #[test]
     fn todolist_search_should_return_todos_in_requested_order(
     ) {
-        let mut todos = TodoList::new();
+        let mut todos =
+            new_todo_list!();
 
         let items =
             add_todos(&mut todos)
@@ -1107,15 +1113,13 @@ mod tests {
     #[test]
     fn todolist_search_should_fail_when_deadline_is_invalid(
     ) {
-        let todos = TodoList::new();
-
         let query = Query::builder()
             .deadline(Some(
                 "abc".to_string(),
             ))
             .build();
 
-        let actual = todos
+        let actual = new_todo_list!()
             .search(&query)
             .unwrap_err();
 
@@ -1127,15 +1131,13 @@ mod tests {
     #[test]
     fn todolist_count_by_should_fail_when_deadline_is_invalid(
     ) {
-        let todos = TodoList::new();
-
         let query = Query::builder()
             .deadline(Some(
                 "abc".to_string(),
             ))
             .build();
 
-        let actual = todos
+        let actual = new_todo_list!()
             .count_by(&query)
             .unwrap_err();
 
