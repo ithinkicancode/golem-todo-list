@@ -1,8 +1,7 @@
 use bindings::{export, exports::golem::todos::api::*};
 use lib::{
     core::{u64_from, AppResult},
-    title::Title,
-    todos::{self, TodoList},
+    todos::{self, Title, TodoList},
 };
 use once_cell::sync::Lazy;
 

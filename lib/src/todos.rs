@@ -1,24 +1,20 @@
 use crate::{
     core::{unix_time_from, AppResult},
-    title::Title,
+    query,
+    sort_by::SortBy,
+    title,
 };
 use binary_heap_plus::BinaryHeap;
 use chrono::Utc;
 use enum_iterator::Sequence;
 use getset::{CopyGetters, Getters};
-use std::{
-    cmp, collections::HashMap,
-    num::TryFromIntError,
-};
+use std::collections::HashMap;
 use typed_builder::TypedBuilder;
 use uuid::Uuid;
 
-type ResultCap = u32;
-
-const QUERY_DEFAULT_LIMIT: ResultCap =
-    10;
-
-const QUERY_MAX_LIMIT: ResultCap = 100;
+pub type Query = query::Query;
+pub type QuerySort = query::QuerySort;
+pub type Title = title::Title;
 
 macro_rules! unix_time_now {
     () => {
@@ -58,142 +54,6 @@ pub enum Priority {
     Low,
     Medium,
     High,
-}
-
-#[derive(Clone)]
-pub enum QuerySort {
-    Deadline,
-    Priority,
-    Status,
-}
-
-#[derive(
-    Eq, PartialEq, Ord, PartialOrd,
-)]
-enum SortBy {
-    Deadline(cmp::Reverse<Option<i64>>),
-    Priority(cmp::Reverse<Priority>),
-    Status(Status),
-    Title(String),
-}
-impl SortBy {
-    fn from(
-        query_sort: &Option<QuerySort>,
-    ) -> impl Fn(&Todo) -> Self + '_
-    {
-        move |t: &Todo| match query_sort
-        {
-            Some(
-                QuerySort::Priority,
-            ) => SortBy::Priority(
-                cmp::Reverse(
-                    t.priority,
-                ),
-            ),
-            Some(QuerySort::Status) => {
-                SortBy::Status(t.status)
-            }
-            Some(
-                QuerySort::Deadline,
-            ) => SortBy::Deadline(
-                cmp::Reverse(
-                    t.deadline,
-                ),
-            ),
-            None => SortBy::Title(
-                t.title.clone(),
-            ),
-        }
-    }
-}
-
-#[derive(Default, TypedBuilder)]
-#[builder(field_defaults(default))]
-pub struct Query {
-    keyword: Option<String>,
-
-    priority: Option<Priority>,
-
-    status: Option<Status>,
-
-    deadline: Option<String>,
-
-    sort: Option<QuerySort>,
-
-    limit: Option<ResultCap>,
-}
-impl Query {
-    fn validate_limit(
-        &self,
-    ) -> AppResult<usize> {
-        self.limit
-            .map(|n| {
-                if n > QUERY_MAX_LIMIT {
-                    QUERY_MAX_LIMIT
-                } else if n < 1 {
-                    QUERY_DEFAULT_LIMIT
-                } else {
-                    n
-                }
-            })
-            .unwrap_or(
-                QUERY_DEFAULT_LIMIT,
-            )
-            .try_into()
-            .map_err(
-                |e: TryFromIntError| {
-                    e.to_string()
-                },
-            )
-    }
-
-    fn match_keyword(
-        &self,
-        todo: &Todo,
-    ) -> bool {
-        self.keyword
-            .as_ref()
-            .map(|keyword| {
-                todo.title
-                    .contains(keyword)
-            })
-            .unwrap_or(true)
-    }
-
-    fn match_priority(
-        &self,
-        todo: &Todo,
-    ) -> bool {
-        self.priority
-            .map(|p| p == todo.priority)
-            .unwrap_or(true)
-    }
-
-    fn match_status(
-        &self,
-        todo: &Todo,
-    ) -> bool {
-        self.status
-            .map(|s| s == todo.status)
-            .unwrap_or(true)
-    }
-
-    fn match_deadline(
-        deadline: &Option<i64>,
-        todo: &Todo,
-    ) -> bool {
-        deadline
-            .map(|deadline| {
-                if let Some(before) =
-                    todo.deadline
-                {
-                    before <= deadline
-                } else {
-                    true
-                }
-            })
-            .unwrap_or(true)
-    }
 }
 
 #[derive(Clone, TypedBuilder)]
@@ -242,13 +102,13 @@ pub struct Todo {
     id: String,
 
     #[getset(get = "pub")]
-    title: String,
+    pub(crate) title: String,
 
     #[getset(get_copy = "pub")]
-    priority: Priority,
+    pub(crate) priority: Priority,
 
     #[getset(get_copy = "pub")]
-    status: Status,
+    pub(crate) status: Status,
 
     #[getset(get_copy = "pub")]
     created_timestamp: i64,
@@ -257,7 +117,7 @@ pub struct Todo {
     updated_timestamp: i64,
 
     #[getset(get_copy = "pub")]
-    deadline: Option<i64>,
+    pub(crate) deadline: Option<i64>,
 }
 
 fn item_not_found(id: &str) -> String {
