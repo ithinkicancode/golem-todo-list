@@ -8,6 +8,7 @@ binary-heap-plus = "~0.5.0"
 chrono = "~0.4.26"
 enum-iterator = "~1.4.1"
 getset = "~0.1.2"
+nutype = "~0.3.1"
 once_cell = "~1.18.0"
 typed-builder = "~0.15.2"
 

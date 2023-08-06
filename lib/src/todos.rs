@@ -1,5 +1,6 @@
-use crate::core::{
-    unix_time_from, AppResult,
+use crate::{
+    core::{unix_time_from, AppResult},
+    title::Title,
 };
 use binary_heap_plus::BinaryHeap;
 use chrono::Utc;
@@ -107,23 +108,18 @@ impl SortBy {
 }
 
 #[derive(Default, TypedBuilder)]
+#[builder(field_defaults(default))]
 pub struct Query {
-    #[builder(default)]
     keyword: Option<String>,
 
-    #[builder(default)]
     priority: Option<Priority>,
 
-    #[builder(default)]
     status: Option<Status>,
 
-    #[builder(default)]
     deadline: Option<String>,
 
-    #[builder(default)]
     sort: Option<QuerySort>,
 
-    #[builder(default)]
     limit: Option<ResultCap>,
 }
 impl Query {
@@ -202,43 +198,23 @@ impl Query {
 
 #[derive(Clone, TypedBuilder)]
 pub struct NewTodo {
-    title: String,
+    title: Title,
 
     priority: Priority,
 
     #[builder(default)]
     deadline: Option<String>,
 }
-impl NewTodo {
-    const ERROR_EMPTY_TITLE: &str =
-        "Title cannot be empty.";
-
-    fn validate_title(
-        &self,
-    ) -> AppResult<&str> {
-        let title = self.title.trim();
-
-        if title.is_empty() {
-            Err(Self::ERROR_EMPTY_TITLE
-                .to_string())
-        } else {
-            Ok(title)
-        }
-    }
-}
 
 #[derive(TypedBuilder)]
+#[builder(field_defaults(default))]
 pub struct UpdateTodo {
-    #[builder(default)]
-    title: Option<String>,
+    title: Option<Title>,
 
-    #[builder(default)]
     priority: Option<Priority>,
 
-    #[builder(default)]
     status: Option<Status>,
 
-    #[builder(default)]
     deadline: Option<String>,
 }
 impl UpdateTodo {
@@ -311,9 +287,8 @@ impl TodoList {
             &item.deadline,
         )?;
 
-        let title = item
-            .validate_title()?
-            .to_string();
+        let title =
+            item.title.validated()?;
 
         let id =
             Uuid::new_v4().to_string();
@@ -363,15 +338,13 @@ impl TodoList {
                 {
                     let title_update =
                         title_update
-                            .trim();
+                            .validated(
+                            )?;
 
-                    if !{
-                        title_update
-                            .is_empty()
-                    } && todo.title
+                    if todo.title
                         != title_update
                     {
-                        todo.title = title_update.to_string();
+                        todo.title = title_update;
                         modified = true;
                     }
                 }
@@ -583,11 +556,18 @@ mod tests {
             title: &str,
         ) -> Self {
             Self {
-                title: title
-                    .to_string(),
+                title: Title::new(
+                    title,
+                ),
                 ..self.clone()
             }
         }
+    }
+
+    fn too_long_title() -> String {
+        ('a'..='z')
+            .map(|c| c.to_string())
+            .collect()
     }
 
     #[test]
@@ -667,7 +647,7 @@ mod tests {
         let priority = Priority::Medium;
 
         let item = NewTodo {
-            title: title.to_string(),
+            title: Title::new(title),
             priority,
             deadline: None,
         };
@@ -699,7 +679,7 @@ mod tests {
         let actual = new_todo_list!()
             .add(
                 &NewTodo::builder()
-                    .title("abc".to_string())
+                    .title(Title::new("abc"))
                     .priority(Priority::Medium)
                     .deadline(Some("abc".to_string()))
                     .build()
@@ -716,14 +696,31 @@ mod tests {
         let actual = new_todo_list!()
             .add(
                 &NewTodo::builder()
-                    .title("".to_string())
+                    .title(Title::new(""))
                     .priority(Priority::Medium)
                     .build()
             ).unwrap_err();
 
         assert_eq!(
             actual,
-            NewTodo::ERROR_EMPTY_TITLE
+            Title::EMPTY_TITLE_ERROR
+        )
+    }
+
+    #[test]
+    fn todolist_add_should_fail_when_title_length_is_too_long(
+    ) {
+        let actual = new_todo_list!()
+            .add(
+                &NewTodo::builder()
+                    .title(Title::new(too_long_title()))
+                    .priority(Priority::Medium)
+                    .build()
+            ).unwrap_err();
+
+        assert_eq!(
+            actual,
+            Title::EXCEEDING_MAX_LEN_ERROR
         )
     }
 
@@ -736,7 +733,7 @@ mod tests {
         let v1 = todos
             .add(
                 &NewTodo::builder()
-                    .title("abc".to_string())
+                    .title(Title::new("abc"))
                     .priority(Priority::Medium)
                     .build()
             ).unwrap();
@@ -744,7 +741,7 @@ mod tests {
         let update =
             UpdateTodo::builder()
                 .title(Some(
-                    "abc".to_string(),
+                    Title::new("abc"),
                 ))
                 .priority(Some(
                     Priority::High,
@@ -774,7 +771,7 @@ mod tests {
         let v1 = todos
             .add(
                 &NewTodo::builder()
-                    .title("abc".to_string())
+                    .title(Title::new("abc"))
                     .priority(Priority::Medium)
                     .build()
             ).unwrap();
@@ -793,6 +790,71 @@ mod tests {
     }
 
     #[test]
+    fn todolist_update_should_fail_when_title_update_is_empty(
+    ) {
+        let mut todos =
+            new_todo_list!();
+
+        let v1 = todos
+            .add(
+                &NewTodo::builder()
+                    .title(Title::new("abc"))
+                    .priority(Priority::Medium)
+                    .build()
+            ).unwrap();
+
+        let update =
+            UpdateTodo::builder()
+                .title(Some(
+                    Title::new(""),
+                ))
+                .build();
+
+        let actual = todos
+            .update(&v1.id, &update)
+            .unwrap_err();
+
+        assert_eq!(
+            actual,
+            Title::EMPTY_TITLE_ERROR
+        );
+    }
+
+    #[test]
+    fn todolist_update_should_fail_when_title_update_is_too_long(
+    ) {
+        let mut todos =
+            new_todo_list!();
+
+        let v1 = todos
+            .add(
+                &NewTodo::builder()
+                    .title(Title::new("abc"))
+                    .priority(Priority::Medium)
+                    .build()
+            ).unwrap();
+
+        let update =
+            UpdateTodo::builder()
+                .title(Some(
+                    Title::new(
+                        too_long_title(
+                        ),
+                    ),
+                ))
+                .build();
+
+        let actual = todos
+            .update(&v1.id, &update)
+            .unwrap_err();
+
+        assert_eq!(
+            actual,
+            Title::EXCEEDING_MAX_LEN_ERROR
+        );
+    }
+
+    #[test]
     fn todolist_update_should_fail_when_deadline_is_invalid(
     ) {
         let mut todos =
@@ -801,7 +863,7 @@ mod tests {
         let v1 = todos
             .add(
                 &NewTodo::builder()
-                    .title("abc".to_string())
+                    .title(Title::new("abc"))
                     .priority(Priority::Medium)
                     .build()
             ).unwrap();
@@ -826,7 +888,7 @@ mod tests {
         todos: &mut TodoList,
     ) -> AppResult<Vec<Todo>> {
         let low_todo = NewTodo {
-            title: "a".to_string(),
+            title: Title::new("a"),
             priority: Priority::Low,
             deadline: None,
         };

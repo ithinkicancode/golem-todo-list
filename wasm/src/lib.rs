@@ -1,6 +1,7 @@
 use bindings::{export, exports::golem::todos::api::*};
 use lib::{
     core::{u64_from, AppResult},
+    title::Title,
     todos::{self, TodoList},
 };
 use once_cell::sync::Lazy;
@@ -54,7 +55,7 @@ fn query_sort_from_incoming(sort: QuerySort) -> todos::QuerySort {
 
 fn new_todo_from_incoming(item: NewTodo) -> todos::NewTodo {
     todos::NewTodo::builder()
-        .title(item.title)
+        .title(Title::new(item.title))
         .priority(priority_from_incoming(item.priority))
         .deadline(item.deadline)
         .build()
@@ -62,7 +63,7 @@ fn new_todo_from_incoming(item: NewTodo) -> todos::NewTodo {
 
 fn update_todo_from_incoming(item: UpdateTodo) -> todos::UpdateTodo {
     todos::UpdateTodo::builder()
-        .title(item.title)
+        .title(item.title.map(Title::new))
         .priority(item.priority.map(priority_from_incoming))
         .status(item.status.map(status_from_incoming))
         .deadline(item.deadline)
