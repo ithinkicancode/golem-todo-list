@@ -123,16 +123,4 @@ mod tests {
             )
         };
     }
-
-    #[macro_export]
-    macro_rules! assert_fuzzy_error_msg {
-        ($actual:ident, $expected:ident) => {
-            let actual = $actual
-                .unwrap_err()
-                .to_string();
-
-            assert!(actual
-                .contains($expected));
-        };
-    }
 }
