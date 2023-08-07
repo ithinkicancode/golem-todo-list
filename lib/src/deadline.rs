@@ -93,8 +93,8 @@ mod tests {
         expected: i64,
     ) {
         let deadline =
-            OptionalDeadlineInput(
-                Some(input.to_string()),
+            OptionalDeadlineInput::some(
+                input,
             );
         let actual = deadline
             .unix_time()
@@ -123,8 +123,8 @@ mod tests {
         input: &str,
     ) {
         let deadline =
-            OptionalDeadlineInput(
-                Some(input.to_string()),
+            OptionalDeadlineInput::some(
+                input,
             );
         let actual = deadline
             .unix_time()
