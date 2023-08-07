@@ -1,8 +1,6 @@
 use crate::{
-    core::{unix_time_from, AppResult},
-    query,
-    sort_by::SortBy,
-    title,
+    core::AppResult, deadline, query,
+    sort_by::SortBy, title,
 };
 use binary_heap_plus::BinaryHeap;
 use chrono::Utc;
@@ -12,6 +10,8 @@ use std::collections::HashMap;
 use typed_builder::TypedBuilder;
 use uuid::Uuid;
 
+pub type OptionalDeadlineInput =
+    deadline::OptionalDeadlineInput;
 pub type Query = query::Query;
 pub type QuerySort = query::QuerySort;
 pub type Title = title::Title;
@@ -62,8 +62,8 @@ pub struct NewTodo {
 
     priority: Priority,
 
-    #[builder(default)]
-    deadline: Option<String>,
+    #[builder(default = OptionalDeadlineInput::default())]
+    deadline: OptionalDeadlineInput,
 }
 
 #[derive(TypedBuilder)]
@@ -75,7 +75,7 @@ pub struct UpdateTodo {
 
     status: Option<Status>,
 
-    deadline: Option<String>,
+    deadline: OptionalDeadlineInput,
 }
 impl UpdateTodo {
     fn change_is_present(
@@ -143,9 +143,9 @@ impl TodoList {
         &mut self,
         item: &NewTodo,
     ) -> AppResult<Todo> {
-        let deadline = unix_time_from(
-            &item.deadline,
-        )?;
+        let deadline = item
+            .deadline
+            .unix_time()?;
 
         let title =
             item.title.validated()?;
@@ -182,9 +182,9 @@ impl TodoList {
     ) -> AppResult<Todo> {
         if change.change_is_present() {
             let deadline_update =
-                unix_time_from(
-                    &change.deadline,
-                )?;
+                change
+                    .deadline
+                    .unix_time()?;
 
             if let Some(todo) =
                 self.0.get_mut(id)
@@ -273,9 +273,9 @@ impl TodoList {
         &self,
         query: &Query,
     ) -> AppResult<Vec<Todo>> {
-        let deadline = unix_time_from(
-            &query.deadline,
-        )?;
+        let deadline = query
+            .deadline()
+            .unix_time()?;
 
         let top_n =
             query.validate_limit()?;
@@ -319,9 +319,9 @@ impl TodoList {
         &self,
         query: &Query,
     ) -> AppResult<usize> {
-        let deadline = unix_time_from(
-            &query.deadline,
-        )?;
+        let deadline = query
+            .deadline()
+            .unix_time()?;
 
         let count = self
             .filter_by(query, &deadline)
@@ -392,7 +392,7 @@ impl TodoList {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::INVALID_DATE_TIME_FORMAT;
+    use crate::deadline::INVALID_DATE_TIME_FORMAT;
     use enum_iterator::all;
     use maplit::hashset;
     use pretty_assertions::assert_eq;
@@ -509,7 +509,7 @@ mod tests {
         let item = NewTodo {
             title: Title::new(title),
             priority,
-            deadline: None,
+            deadline: OptionalDeadlineInput::none(),
         };
 
         let actual =
@@ -539,9 +539,13 @@ mod tests {
         let actual = new_todo_list!()
             .add(
                 &NewTodo::builder()
-                    .title(Title::new("abc"))
+                    .title(
+                        Title::new("abc")
+                    )
                     .priority(Priority::Medium)
-                    .deadline(Some("abc".to_string()))
+                    .deadline(
+                        OptionalDeadlineInput::some("abc")
+                    )
                     .build()
             ).unwrap_err();
 
@@ -556,7 +560,9 @@ mod tests {
         let actual = new_todo_list!()
             .add(
                 &NewTodo::builder()
-                    .title(Title::new(""))
+                    .title(
+                        Title::new("")
+                    )
                     .priority(Priority::Medium)
                     .build()
             ).unwrap_err();
@@ -606,10 +612,9 @@ mod tests {
                 .priority(Some(
                     Priority::High,
                 ))
-                .deadline(Some(
-                    "2022-01-01 19"
-                        .to_string(),
-                ))
+                .deadline(
+                    OptionalDeadlineInput::some("2022-01-01 19")
+                )
                 .build();
 
         let v2 = todos
@@ -730,9 +735,9 @@ mod tests {
 
         let update =
             UpdateTodo::builder()
-                .deadline(Some(
-                    "xyz".to_string(),
-                ))
+                .deadline(
+                    OptionalDeadlineInput::some("xyz")
+                )
                 .build();
 
         let actual = todos
@@ -750,7 +755,7 @@ mod tests {
         let low_todo = NewTodo {
             title: Title::new("a"),
             priority: Priority::Low,
-            deadline: None,
+            deadline: OptionalDeadlineInput::none(),
         };
 
         let todo_a = todos
@@ -1049,9 +1054,9 @@ mod tests {
     fn todolist_search_should_fail_when_deadline_is_invalid(
     ) {
         let query = Query::builder()
-            .deadline(Some(
-                "abc".to_string(),
-            ))
+            .deadline(
+                OptionalDeadlineInput::some("abc")
+            )
             .build();
 
         let actual = new_todo_list!()
@@ -1067,9 +1072,9 @@ mod tests {
     fn todolist_count_by_should_fail_when_deadline_is_invalid(
     ) {
         let query = Query::builder()
-            .deadline(Some(
-                "abc".to_string(),
-            ))
+            .deadline(
+                OptionalDeadlineInput::some("abc")
+            )
             .build();
 
         let actual = new_todo_list!()

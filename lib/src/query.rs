@@ -1,5 +1,6 @@
 use crate::{
     core::AppResult,
+    deadline::OptionalDeadlineInput,
     todos::{Priority, Status, Todo},
 };
 use getset::Getters;
@@ -31,7 +32,8 @@ pub struct Query {
 
     status: Option<Status>,
 
-    pub(crate) deadline: Option<String>,
+    #[getset(get = "pub")]
+    deadline: OptionalDeadlineInput,
 
     #[getset(get = "pub")]
     sort: Option<QuerySort>,
