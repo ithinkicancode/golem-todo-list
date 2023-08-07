@@ -28,21 +28,23 @@ impl SortBy {
                 QuerySort::Priority,
             ) => SortBy::Priority(
                 cmp::Reverse(
-                    t.priority,
+                    t.priority(),
                 ),
             ),
             Some(QuerySort::Status) => {
-                SortBy::Status(t.status)
+                SortBy::Status(
+                    t.status(),
+                )
             }
             Some(
                 QuerySort::Deadline,
             ) => SortBy::Deadline(
                 cmp::Reverse(
-                    t.deadline,
+                    t.deadline(),
                 ),
             ),
             None => SortBy::Title(
-                t.title.clone(),
+                t.title().clone(),
             ),
         }
     }

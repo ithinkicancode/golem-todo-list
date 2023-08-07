@@ -2,6 +2,7 @@ use crate::{
     core::AppResult,
     todos::{Priority, Status, Todo},
 };
+use getset::Getters;
 use std::num::TryFromIntError;
 use typed_builder::TypedBuilder;
 
@@ -19,7 +20,9 @@ pub enum QuerySort {
     Status,
 }
 
-#[derive(Default, TypedBuilder)]
+#[derive(
+    Default, Getters, TypedBuilder,
+)]
 #[builder(field_defaults(default))]
 pub struct Query {
     keyword: Option<String>,
@@ -30,10 +33,12 @@ pub struct Query {
 
     pub(crate) deadline: Option<String>,
 
-    pub(crate) sort: Option<QuerySort>,
+    #[getset(get = "pub")]
+    sort: Option<QuerySort>,
 
     limit: Option<ResultCap>,
 }
+
 impl Query {
     pub(crate) fn validate_limit(
         &self,
@@ -66,7 +71,7 @@ impl Query {
         self.keyword
             .as_ref()
             .map(|keyword| {
-                todo.title
+                todo.title()
                     .contains(keyword)
             })
             .unwrap_or(true)
@@ -77,7 +82,9 @@ impl Query {
         todo: &Todo,
     ) -> bool {
         self.priority
-            .map(|p| p == todo.priority)
+            .map(|p| {
+                p == todo.priority()
+            })
             .unwrap_or(true)
     }
 
@@ -86,7 +93,7 @@ impl Query {
         todo: &Todo,
     ) -> bool {
         self.status
-            .map(|s| s == todo.status)
+            .map(|s| s == todo.status())
             .unwrap_or(true)
     }
 
@@ -97,7 +104,7 @@ impl Query {
         deadline
             .map(|deadline| {
                 if let Some(before) =
-                    todo.deadline
+                    todo.deadline()
                 {
                     before <= deadline
                 } else {

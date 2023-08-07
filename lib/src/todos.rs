@@ -102,13 +102,13 @@ pub struct Todo {
     id: String,
 
     #[getset(get = "pub")]
-    pub(crate) title: String,
+    title: String,
 
     #[getset(get_copy = "pub")]
-    pub(crate) priority: Priority,
+    priority: Priority,
 
     #[getset(get_copy = "pub")]
-    pub(crate) status: Status,
+    status: Status,
 
     #[getset(get_copy = "pub")]
     created_timestamp: i64,
@@ -117,7 +117,7 @@ pub struct Todo {
     updated_timestamp: i64,
 
     #[getset(get_copy = "pub")]
-    pub(crate) deadline: Option<i64>,
+    deadline: Option<i64>,
 }
 
 fn item_not_found(id: &str) -> String {
@@ -132,7 +132,7 @@ pub struct TodoList(
     HashMap<String, Todo>,
 );
 impl TodoList {
-    const NO_CHANGE_PROVIDED: &str =
+    const NO_CHANGE_PROVIDED_ERROR: &str =
         "At least one change must be present.";
 
     pub fn new() -> Self {
@@ -248,7 +248,7 @@ impl TodoList {
                 Err(item_not_found(id))
             }
         } else {
-            Err(Self::NO_CHANGE_PROVIDED
+            Err(Self::NO_CHANGE_PROVIDED_ERROR
                 .to_string())
         }
     }
@@ -281,7 +281,7 @@ impl TodoList {
             query.validate_limit()?;
 
         let sort =
-            SortBy::from(&query.sort);
+            SortBy::from(query.sort());
 
         let mut heap =
             BinaryHeap::with_capacity_by_key(
@@ -645,7 +645,7 @@ mod tests {
             .unwrap_err();
 
         assert!(actual.contains(
-            TodoList::NO_CHANGE_PROVIDED
+            TodoList::NO_CHANGE_PROVIDED_ERROR
         ));
     }
 
@@ -666,7 +666,7 @@ mod tests {
         let update =
             UpdateTodo::builder()
                 .title(Some(
-                    Title::new(""),
+                    Title::new("   "),
                 ))
                 .build();
 
