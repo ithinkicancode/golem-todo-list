@@ -1,6 +1,7 @@
 use crate::{
     core::AppResult, deadline, query,
-    sort_by::SortBy, title,
+    result_limit, sort_by::SortBy,
+    title,
 };
 use binary_heap_plus::BinaryHeap;
 use chrono::Utc;
@@ -14,6 +15,8 @@ pub type OptionalDeadlineInput =
     deadline::OptionalDeadlineInput;
 pub type Query = query::Query;
 pub type QuerySort = query::QuerySort;
+pub type OptionalResultLimit =
+    result_limit::OptionalResultLimit;
 pub type Title = title::Title;
 
 macro_rules! unix_time_now {
@@ -277,8 +280,9 @@ impl TodoList {
             .deadline()
             .unix_time()?;
 
-        let top_n =
-            query.validate_limit()?;
+        let top_n = query
+            .limit()
+            .validated()?;
 
         let sort =
             SortBy::from(query.sort());
@@ -994,7 +998,9 @@ mod tests {
         let mut actual_highs = todos
             .search(
                 &Query::builder()
-                    .limit(Some(5))
+                    .limit(
+                        OptionalResultLimit::some(5)
+                    )
                     .sort(Some(QuerySort::Priority))
                     .build()
             )
@@ -1037,7 +1043,9 @@ mod tests {
         let actual = todos
             .search(
                 &Query::builder()
-                    .limit(Some(5))
+                    .limit(
+                        OptionalResultLimit::some(5)
+                    )
                     .build(),
             )
             .unwrap();

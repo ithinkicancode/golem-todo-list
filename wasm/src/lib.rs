@@ -1,7 +1,7 @@
 use bindings::{export, exports::golem::todos::api::*};
 use lib::{
     core::{u64_from, AppResult},
-    todos::{self, OptionalDeadlineInput, Title, TodoList},
+    todos::{self, OptionalDeadlineInput, OptionalResultLimit, Title, TodoList},
 };
 use once_cell::sync::Lazy;
 
@@ -76,7 +76,7 @@ fn query_from_incoming(query: Query) -> todos::Query {
         .status(query.status.map(status_from_incoming))
         .deadline(OptionalDeadlineInput::new(query.deadline))
         .sort(query.sort.map(query_sort_from_incoming))
-        .limit(query.limit)
+        .limit(OptionalResultLimit::new(query.limit))
         .build()
 }
 
