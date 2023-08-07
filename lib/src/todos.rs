@@ -81,6 +81,8 @@ pub struct UpdateTodo {
     deadline: OptionalDeadlineInput,
 }
 impl UpdateTodo {
+    const NO_CHANGE_PROVIDED_ERROR: &str = "At least one change must be present.";
+
     fn change_is_present(
         &self,
     ) -> bool {
@@ -135,9 +137,6 @@ pub struct TodoList(
     HashMap<String, Todo>,
 );
 impl TodoList {
-    const NO_CHANGE_PROVIDED_ERROR: &str =
-        "At least one change must be present.";
-
     pub fn new() -> Self {
         Self::default()
     }
@@ -251,8 +250,7 @@ impl TodoList {
                 Err(item_not_found(id))
             }
         } else {
-            Err(Self::NO_CHANGE_PROVIDED_ERROR
-                .to_string())
+            Err(UpdateTodo::NO_CHANGE_PROVIDED_ERROR.to_string())
         }
     }
 
@@ -406,12 +404,6 @@ mod tests {
         () => {
             TodoList::new()
         };
-    }
-
-    impl Query {
-        fn empty() -> Self {
-            Self::default()
-        }
     }
 
     impl NewTodo {
@@ -654,7 +646,7 @@ mod tests {
             .unwrap_err();
 
         assert!(actual.contains(
-            TodoList::NO_CHANGE_PROVIDED_ERROR
+            UpdateTodo::NO_CHANGE_PROVIDED_ERROR
         ));
     }
 

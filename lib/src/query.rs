@@ -85,3 +85,14 @@ impl Query {
             .unwrap_or(true)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    impl Query {
+        pub(crate) fn empty() -> Self {
+            Self::default()
+        }
+    }
+}
