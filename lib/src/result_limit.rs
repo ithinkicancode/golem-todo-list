@@ -1,5 +1,9 @@
-use crate::core::AppResult;
-use std::num::TryFromIntError;
+use crate::app_error::{
+    AppError, AppResult,
+};
+use error_stack::{
+    IntoReport, ResultExt,
+};
 
 type Limit = u32;
 
@@ -36,10 +40,9 @@ impl OptionalResultLimit {
                 QUERY_DEFAULT_LIMIT,
             )
             .try_into()
-            .map_err(
-                |e: TryFromIntError| {
-                    e.to_string()
-                },
+            .into_report()
+            .change_context(
+                AppError::DataConversionU32ToUsize,
             )
     }
 }

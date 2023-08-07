@@ -1,11 +1,13 @@
 use crate::{
-    core::AppResult, deadline, query,
-    result_limit, sort_by::SortBy,
+    app_error::{AppError, AppResult},
+    deadline, query, result_limit,
+    sort_by::SortBy,
     title,
 };
 use binary_heap_plus::BinaryHeap;
 use chrono::Utc;
 use enum_iterator::Sequence;
+use error_stack::{bail, report};
 use getset::{CopyGetters, Getters};
 use std::collections::HashMap;
 use typed_builder::TypedBuilder;
@@ -81,8 +83,6 @@ pub struct UpdateTodo {
     deadline: OptionalDeadlineInput,
 }
 impl UpdateTodo {
-    const NO_CHANGE_PROVIDED_ERROR: &str = "At least one change must be present.";
-
     fn change_is_present(
         &self,
     ) -> bool {
@@ -123,13 +123,6 @@ pub struct Todo {
 
     #[getset(get_copy = "pub")]
     deadline: Option<i64>,
-}
-
-fn item_not_found(id: &str) -> String {
-    format!(
-        "Item with ID '{}' not found.",
-        id
-    )
 }
 
 #[derive(Default)]
@@ -247,10 +240,14 @@ impl TodoList {
 
                 Ok(todo.clone())
             } else {
-                Err(item_not_found(id))
+                bail!(
+                    AppError::TodoNotFound(id.to_string())
+                )
             }
         } else {
-            Err(UpdateTodo::NO_CHANGE_PROVIDED_ERROR.to_string())
+            bail!(
+                AppError::UpdateHasNoChanges
+            )
         }
     }
 
@@ -343,8 +340,11 @@ impl TodoList {
         self.0
             .get(id)
             .cloned()
-            .ok_or_else(|| {
-                item_not_found(id)
+            .ok_or_else(|| id.to_string())
+            .map_err(|id| {
+                report!(
+                    AppError::TodoNotFound(id)
+                )
             })
     }
 
@@ -355,8 +355,11 @@ impl TodoList {
         self.0
             .remove(id)
             .map(|_| ())
-            .ok_or_else(|| {
-                item_not_found(id)
+            .ok_or_else(|| id.to_string())
+            .map_err(|id| {
+                report!(
+                    AppError::TodoNotFound(id)
+                )
             })
     }
 
@@ -394,7 +397,10 @@ impl TodoList {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::deadline::INVALID_DATE_TIME_FORMAT;
+    use crate::{
+        assert_app_error,
+        deadline::USER_DATE_TIME_FORMAT,
+    };
     use enum_iterator::all;
     use maplit::hashset;
     use pretty_assertions::assert_eq;
@@ -420,6 +426,13 @@ mod tests {
         }
     }
 
+    impl UpdateTodo {
+        fn empty() -> Self {
+            UpdateTodo::builder()
+                .build()
+        }
+    }
+
     fn too_long_title() -> String {
         ('a'..='z')
             .map(|c| c.to_string())
@@ -440,11 +453,16 @@ mod tests {
     ) {
         let id = "not-exist";
 
-        assert_eq!(
-            new_todo_list!()
-                .get(id)
-                .unwrap_err(),
-            item_not_found(id)
+        let actual =
+            new_todo_list!().get(id);
+
+        let expected =
+            AppError::TodoNotFound(
+                id.to_string(),
+            );
+
+        assert_app_error!(
+            actual, expected
         );
     }
 
@@ -463,11 +481,16 @@ mod tests {
     ) {
         let id = "not-exist";
 
-        assert_eq!(
-            new_todo_list!()
-                .delete(id)
-                .unwrap_err(),
-            item_not_found(id)
+        let actual =
+            new_todo_list!().delete(id);
+
+        let expected =
+            AppError::TodoNotFound(
+                id.to_string(),
+            );
+
+        assert_app_error!(
+            actual, expected
         );
     }
 
@@ -532,22 +555,29 @@ mod tests {
     #[test]
     fn todolist_add_should_fail_when_deadline_is_invalid(
     ) {
-        let actual = new_todo_list!()
-            .add(
-                &NewTodo::builder()
-                    .title(
-                        Title::new("abc")
-                    )
-                    .priority(Priority::Medium)
-                    .deadline(
-                        OptionalDeadlineInput::some("abc")
-                    )
-                    .build()
-            ).unwrap_err();
+        let invalid_date_time = "abc";
 
-        assert!(actual.contains(
-            INVALID_DATE_TIME_FORMAT
-        ));
+        let new_todo = &NewTodo::builder()
+            .title(
+                Title::new("abc")
+            )
+            .priority(Priority::Medium)
+            .deadline(
+                OptionalDeadlineInput::some(invalid_date_time)
+            )
+            .build();
+
+        let actual = new_todo_list!()
+            .add(new_todo);
+
+        let expected = AppError::DateTimeParseError {
+                input: invalid_date_time.to_string(),
+                expected_format: USER_DATE_TIME_FORMAT.to_string()
+            };
+
+        assert_app_error!(
+            actual, expected
+        )
     }
 
     #[test]
@@ -555,34 +585,46 @@ mod tests {
     ) {
         let actual = new_todo_list!()
             .add(
-                &NewTodo::builder()
-                    .title(
-                        Title::new("")
-                    )
-                    .priority(Priority::Medium)
-                    .build()
-            ).unwrap_err();
+            &NewTodo::builder()
+                .title(Title::new(""))
+                .priority(
+                    Priority::Medium,
+                )
+                .build(),
+        );
 
-        assert_eq!(
-            actual,
-            Title::EMPTY_TITLE_ERROR
+        let expected =
+            AppError::EmptyTodoTitle;
+
+        assert_app_error!(
+            actual, expected
         )
     }
 
     #[test]
     fn todolist_add_should_fail_when_title_length_is_too_long(
     ) {
+        let title = too_long_title();
+
         let actual = new_todo_list!()
             .add(
-                &NewTodo::builder()
-                    .title(Title::new(too_long_title()))
-                    .priority(Priority::Medium)
-                    .build()
-            ).unwrap_err();
+            &NewTodo::builder()
+                .title(Title::new(
+                    title.clone(),
+                ))
+                .priority(
+                    Priority::Medium,
+                )
+                .build(),
+        );
 
-        assert_eq!(
-            actual,
-            Title::EXCEEDING_MAX_LEN_ERROR
+        let expected = AppError::TooLongTodoTitle {
+            input: title,
+            expected_len: Title::MAX_LEN
+        };
+
+        assert_app_error!(
+            actual, expected
         )
     }
 
@@ -638,16 +680,17 @@ mod tests {
             ).unwrap();
 
         let update =
-            UpdateTodo::builder()
-                .build();
+            UpdateTodo::empty();
 
         let actual = todos
-            .update(&v1.id, &update)
-            .unwrap_err();
+            .update(&v1.id, &update);
 
-        assert!(actual.contains(
-            UpdateTodo::NO_CHANGE_PROVIDED_ERROR
-        ));
+        let expected =
+            AppError::UpdateHasNoChanges;
+
+        assert_app_error!(
+            actual, expected
+        )
     }
 
     #[test]
@@ -672,13 +715,14 @@ mod tests {
                 .build();
 
         let actual = todos
-            .update(&v1.id, &update)
-            .unwrap_err();
+            .update(&v1.id, &update);
 
-        assert_eq!(
-            actual,
-            Title::EMPTY_TITLE_ERROR
-        );
+        let expected =
+            AppError::EmptyTodoTitle;
+
+        assert_app_error!(
+            actual, expected
+        )
     }
 
     #[test]
@@ -695,23 +739,27 @@ mod tests {
                     .build()
             ).unwrap();
 
+        let title = too_long_title();
+
         let update =
             UpdateTodo::builder()
                 .title(Some(
                     Title::new(
-                        too_long_title(
-                        ),
+                        title.clone(),
                     ),
                 ))
                 .build();
 
         let actual = todos
-            .update(&v1.id, &update)
-            .unwrap_err();
+            .update(&v1.id, &update);
 
-        assert_eq!(
-            actual,
-            Title::EXCEEDING_MAX_LEN_ERROR
+        let expected = AppError::TooLongTodoTitle {
+                input: title,
+                expected_len: Title::MAX_LEN
+            };
+
+        assert_app_error!(
+            actual, expected
         );
     }
 
@@ -729,20 +777,26 @@ mod tests {
                     .build()
             ).unwrap();
 
+        let invalid_date_time = "abc";
+
         let update =
             UpdateTodo::builder()
                 .deadline(
-                    OptionalDeadlineInput::some("xyz")
+                    OptionalDeadlineInput::some(invalid_date_time)
                 )
                 .build();
 
         let actual = todos
-            .update(&v1.id, &update)
-            .unwrap_err();
+            .update(&v1.id, &update);
 
-        assert!(actual.contains(
-            INVALID_DATE_TIME_FORMAT
-        ));
+        let expected = AppError::DateTimeParseError {
+                input: invalid_date_time.to_string(),
+                expected_format: USER_DATE_TIME_FORMAT.to_string()
+            };
+
+        assert_app_error!(
+            actual, expected
+        )
     }
 
     fn add_todos(
@@ -1053,36 +1107,48 @@ mod tests {
     #[test]
     fn todolist_search_should_fail_when_deadline_is_invalid(
     ) {
+        let invalid_date_time = "abc";
+
         let query = Query::builder()
             .deadline(
-                OptionalDeadlineInput::some("abc")
+                OptionalDeadlineInput::some(invalid_date_time)
             )
             .build();
 
         let actual = new_todo_list!()
-            .search(&query)
-            .unwrap_err();
+            .search(&query);
 
-        assert!(actual.contains(
-            INVALID_DATE_TIME_FORMAT
-        ));
+        let expected = AppError::DateTimeParseError {
+                input: invalid_date_time.to_string(),
+                expected_format: USER_DATE_TIME_FORMAT.to_string()
+            };
+
+        assert_app_error!(
+            actual, expected
+        )
     }
 
     #[test]
     fn todolist_count_by_should_fail_when_deadline_is_invalid(
     ) {
+        let invalid_date_time = "abc";
+
         let query = Query::builder()
             .deadline(
-                OptionalDeadlineInput::some("abc")
+                OptionalDeadlineInput::some(invalid_date_time)
             )
             .build();
 
         let actual = new_todo_list!()
-            .count_by(&query)
-            .unwrap_err();
+            .count_by(&query);
 
-        assert!(actual.contains(
-            INVALID_DATE_TIME_FORMAT
-        ));
+        let expected = AppError::DateTimeParseError {
+                input: invalid_date_time.to_string(),
+                expected_format: USER_DATE_TIME_FORMAT.to_string()
+            };
+
+        assert_app_error!(
+            actual, expected
+        )
     }
 }

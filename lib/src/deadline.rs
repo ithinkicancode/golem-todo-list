@@ -1,11 +1,13 @@
-use crate::core::AppResult;
+use crate::app_error::{
+    AppError, AppResult,
+};
 use chrono::naive::NaiveDateTime;
+use error_stack::{
+    IntoReport, ResultExt,
+};
 use once_cell::sync::Lazy;
 
-pub(crate) const INVALID_DATE_TIME_FORMAT: &str =
-    "is NOT in the required format of";
-
-const USER_DATE_TIME_FORMAT: &str =
+pub(crate) const USER_DATE_TIME_FORMAT: &str =
     "%Y-%m-%d %H";
 
 static DATE_TIME_FORMAT: Lazy<String> =
@@ -43,15 +45,13 @@ impl OptionalDeadlineInput {
                     &format!("{}:00:00", s),
                     &DATE_TIME_FORMAT
                 )
-                .map_err(|e| {
-                    format!(
-                        "ERROR: '{}' {} '{}': {:?}.",
-                        s,
-                        INVALID_DATE_TIME_FORMAT,
-                        USER_DATE_TIME_FORMAT,
-                        e.to_string()
-                    )
-                })?
+                .into_report()
+                .change_context(
+                    AppError::DateTimeParseError {
+                        input: s.clone(),
+                        expected_format: USER_DATE_TIME_FORMAT.to_string(),
+                    },
+                )?
                 .timestamp();
 
             Ok(unix_time)
@@ -63,6 +63,7 @@ impl OptionalDeadlineInput {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::assert_app_error;
     use pretty_assertions::assert_eq;
     use test_case::test_case;
 
@@ -126,12 +127,16 @@ mod tests {
             OptionalDeadlineInput::some(
                 input,
             );
-        let actual = deadline
-            .unix_time()
-            .unwrap_err();
+        let actual =
+            deadline.unix_time();
 
-        assert!(actual.contains(
-            INVALID_DATE_TIME_FORMAT
-        ))
+        let expected = AppError::DateTimeParseError {
+                input: input.to_string(),
+                expected_format: USER_DATE_TIME_FORMAT.to_string()
+            };
+
+        assert_app_error!(
+            actual, expected
+        )
     }
 }

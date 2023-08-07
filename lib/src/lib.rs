@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+pub mod app_error;
 pub mod core;
 mod deadline;
 mod query;

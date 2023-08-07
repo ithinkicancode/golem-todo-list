@@ -1,4 +1,7 @@
-use crate::core::AppResult;
+use crate::app_error::{
+    AppError, AppResult,
+};
+use error_stack::bail;
 use nutype::nutype;
 
 #[nutype(sanitize(trim))]
@@ -6,13 +9,8 @@ use nutype::nutype;
 pub struct Title(String);
 
 impl Title {
-    const MAX_LEN: usize = 20;
-
-    pub(crate) const EXCEEDING_MAX_LEN_ERROR: &str =
-        "Title cannot exceed 20 characters.";
-
-    pub(crate) const EMPTY_TITLE_ERROR: &str =
-        "Title cannot be empty.";
+    pub(crate) const MAX_LEN: usize =
+        20;
 
     pub(crate) fn validated(
         &self,
@@ -23,11 +21,16 @@ impl Title {
         let size = title.len();
 
         if size < 1 {
-            Err(Self::EMPTY_TITLE_ERROR
-                .to_string())
+            bail!(
+                AppError::EmptyTodoTitle
+            )
         } else if size > Self::MAX_LEN {
-            Err(Self::EXCEEDING_MAX_LEN_ERROR
-                .to_string())
+            bail!(
+                AppError::TooLongTodoTitle {
+                    input: title.clone(),
+                    expected_len: Self::MAX_LEN
+                }
+            )
         } else {
             Ok(title)
         }

@@ -1,5 +1,6 @@
 use bindings::{export, exports::golem::todos::api::*};
 use lib::{
+    app_error::AppResultExt,
     core::{u64_from, AppResult},
     todos::{self, OptionalDeadlineInput, OptionalResultLimit, Title, TodoList},
 };
@@ -114,7 +115,7 @@ struct Todos;
 impl Api for Todos {
     fn add(item: NewTodo) -> AppResult<Todo> {
         with_app_state(|AppState(todos)| {
-            let result = todos.add(&new_todo_from_incoming(item))?;
+            let result = todos.add(&new_todo_from_incoming(item)).err_as_string()?;
 
             Ok(todo_for_outgoing(result))
         })
@@ -122,7 +123,9 @@ impl Api for Todos {
 
     fn update(id: String, change: UpdateTodo) -> AppResult<Todo> {
         with_app_state(|AppState(todos)| {
-            let result = todos.update(&id, &update_todo_from_incoming(change))?;
+            let result = todos
+                .update(&id, &update_todo_from_incoming(change))
+                .err_as_string()?;
 
             Ok(todo_for_outgoing(result))
         })
@@ -130,7 +133,7 @@ impl Api for Todos {
 
     fn search(query: Query) -> AppResult<Vec<Todo>> {
         with_app_state(|AppState(todos)| {
-            let found = todos.search(&query_from_incoming(query))?;
+            let found = todos.search(&query_from_incoming(query)).err_as_string()?;
 
             let result = found.into_iter().map(todo_for_outgoing).collect();
 
@@ -140,7 +143,9 @@ impl Api for Todos {
 
     fn count_by(filter: Filter) -> AppResult<u64> {
         with_app_state(|AppState(todos)| {
-            let count = todos.count_by(&filter_from_incoming(filter))?;
+            let count = todos
+                .count_by(&filter_from_incoming(filter))
+                .err_as_string()?;
 
             u64_from(count)
         })
@@ -152,14 +157,14 @@ impl Api for Todos {
 
     fn get(id: String) -> AppResult<Todo> {
         with_app_state(|AppState(todos)| {
-            let result = todos.get(&id)?;
+            let result = todos.get(&id).err_as_string()?;
 
             Ok(todo_for_outgoing(result))
         })
     }
 
     fn delete(id: String) -> AppResult<()> {
-        with_app_state(|AppState(todos)| todos.delete(&id))
+        with_app_state(|AppState(todos)| todos.delete(&id).err_as_string())
     }
 
     fn delete_done_items() -> AppResult<u64> {

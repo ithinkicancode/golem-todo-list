@@ -6,6 +6,8 @@ edition = "2021"
 [dependencies]
 binary-heap-plus = "~0.5.0"
 chrono = "~0.4.26"
+error-stack = "~0.3.1"
+kinded = "~0.2.0"
 enum-iterator = "~1.4.1"
 getset = "~0.1.2"
 nutype = "~0.3.1"
