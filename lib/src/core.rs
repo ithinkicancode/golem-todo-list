@@ -1,8 +1,6 @@
 use crate::app_error::{
-    AppError, AppResultExt,
-};
-use error_stack::{
-    IntoReport, ResultExt,
+    AppError, AppResultExt, IntoReport,
+    ResultExt,
 };
 
 // Not used in this crate; only used externally

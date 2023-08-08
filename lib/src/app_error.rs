@@ -7,6 +7,10 @@ use std::fmt::{
 pub type AppResult<T> =
     error_stack::Result<T, AppError>;
 
+pub use error_stack::{
+    bail, report, IntoReport, ResultExt,
+};
+
 pub trait AppResultExt<T> {
     fn err_as_string(
         self,

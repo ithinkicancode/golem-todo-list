@@ -1,7 +1,6 @@
 use crate::app_error::{
-    AppError, AppResult,
+    bail, AppError, AppResult,
 };
-use error_stack::bail;
 use nutype::nutype;
 
 #[nutype(sanitize(trim))]

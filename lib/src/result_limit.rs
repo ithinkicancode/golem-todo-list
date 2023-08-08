@@ -1,8 +1,6 @@
 use crate::app_error::{
-    AppError, AppResult,
-};
-use error_stack::{
-    IntoReport, ResultExt,
+    AppError, AppResult, IntoReport,
+    ResultExt,
 };
 
 type Limit = u32;
@@ -57,5 +55,54 @@ mod tests {
         ) -> Self {
             Self(Some(n))
         }
+    }
+
+    fn assert_limit(
+        actual: Option<Limit>,
+        expected: Limit,
+    ) {
+        assert_eq!(
+            OptionalResultLimit::new(
+                actual
+            )
+            .validated()
+            .unwrap(),
+            expected as usize,
+        )
+    }
+
+    #[test]
+    fn validated_should_return_the_same_value_when_it_is_within_range(
+    ) {
+        let n = 20;
+
+        assert_limit(Some(n), n)
+    }
+
+    #[test]
+    fn validated_should_return_default_when_it_is_not_provided(
+    ) {
+        assert_limit(
+            None,
+            QUERY_DEFAULT_LIMIT,
+        )
+    }
+
+    #[test]
+    fn validated_should_return_default_when_it_is_zero(
+    ) {
+        assert_limit(
+            Some(0),
+            QUERY_DEFAULT_LIMIT,
+        )
+    }
+
+    #[test]
+    fn validated_should_return_max_when_a_greater_value_is_provided(
+    ) {
+        assert_limit(
+            Some(QUERY_MAX_LIMIT + 1),
+            QUERY_MAX_LIMIT,
+        )
     }
 }
