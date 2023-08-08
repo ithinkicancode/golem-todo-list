@@ -403,8 +403,12 @@ mod tests {
     };
     use enum_iterator::all;
     use maplit::hashset;
+    use memoize::memoize;
     use pretty_assertions::assert_eq;
-    use std::collections::HashSet;
+    use std::{
+        collections::HashSet,
+        iter::repeat,
+    };
 
     macro_rules! new_todo_list {
         () => {
@@ -433,9 +437,10 @@ mod tests {
         }
     }
 
+    #[memoize]
     fn too_long_title() -> String {
-        ('a'..='z')
-            .map(|c| c.to_string())
+        repeat('a')
+            .take(Title::MAX_LEN + 1)
             .collect()
     }
 
@@ -1002,7 +1007,9 @@ mod tests {
             _, _, _, _, _, _, todo_g, todo_h, todo_i
         ] =
             <[Todo; 9]>::try_from(items)
-                .expect("Vec doesn't have 9 elements!");
+                .expect(
+                    "`items` vec should contain 9 elements"
+                );
 
         let query = Query::builder()
             .priority(Some(
@@ -1038,7 +1045,9 @@ mod tests {
             todo_g, todo_h, todo_i
         ] =
             <[Todo; 9]>::try_from(items)
-                .expect("Vec doesn't have 9 elements!");
+                .expect(
+                    "`items` vec should contain 9 elements"
+                );
 
         // sort by priority
         let mut actual_highs = todos
