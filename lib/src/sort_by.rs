@@ -44,7 +44,7 @@ impl SortBy {
                 ),
             ),
             None => SortBy::Title(
-                t.title().clone(),
+                t.title().into(),
             ),
         }
     }

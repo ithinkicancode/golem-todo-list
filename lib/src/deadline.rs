@@ -48,8 +48,8 @@ impl OptionalDeadlineInput {
                 .into_report()
                 .change_context(
                     AppError::DateTimeParseError {
-                        input: s.clone(),
-                        expected_format: USER_DATE_TIME_FORMAT.to_string(),
+                        input: s.into(),
+                        expected_format: USER_DATE_TIME_FORMAT.into(),
                     },
                 )?
                 .timestamp();
@@ -71,7 +71,7 @@ mod tests {
         pub(crate) fn some(
             s: &str,
         ) -> Self {
-            Self(Some(s.to_string()))
+            Self(Some(s.into()))
         }
 
         pub(crate) fn none() -> Self {
@@ -131,8 +131,8 @@ mod tests {
             deadline.unix_time();
 
         let expected = AppError::DateTimeParseError {
-                input: input.to_string(),
-                expected_format: USER_DATE_TIME_FORMAT.to_string()
+                input: input.into(),
+                expected_format: USER_DATE_TIME_FORMAT.into()
             };
 
         assert_app_error!(

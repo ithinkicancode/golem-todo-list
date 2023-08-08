@@ -27,7 +27,7 @@ impl Title {
         } else if size > Self::MAX_LEN {
             bail!(
                 AppError::TooLongTodoTitle {
-                    input: title.clone(),
+                    input: title.into(),
                     expected_len: Self::MAX_LEN
                 }
             )

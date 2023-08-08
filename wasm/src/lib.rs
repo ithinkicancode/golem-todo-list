@@ -92,8 +92,8 @@ fn filter_from_incoming(filter: Filter) -> todos::Query {
 
 fn todo_for_outgoing(t: todos::Todo) -> Todo {
     Todo {
-        id: t.id().to_string(),
-        title: t.title().to_string(),
+        id: t.id().into(),
+        title: t.title().into(),
         priority: priority_for_outgoing(t.priority()),
         deadline: t.deadline(),
         status: status_for_outgoing(t.status()),

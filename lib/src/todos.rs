@@ -241,7 +241,7 @@ impl TodoList {
                 Ok(todo.clone())
             } else {
                 bail!(
-                    AppError::TodoNotFound(id.to_string())
+                    AppError::TodoNotFound(id.into())
                 )
             }
         } else {
@@ -340,7 +340,7 @@ impl TodoList {
         self.0
             .get(id)
             .cloned()
-            .ok_or_else(|| id.to_string())
+            .ok_or_else(|| id.into())
             .map_err(|id| {
                 report!(
                     AppError::TodoNotFound(id)
@@ -355,7 +355,7 @@ impl TodoList {
         self.0
             .remove(id)
             .map(|_| ())
-            .ok_or_else(|| id.to_string())
+            .ok_or_else(|| id.into())
             .map_err(|id| {
                 report!(
                     AppError::TodoNotFound(id)
@@ -458,7 +458,7 @@ mod tests {
 
         let expected =
             AppError::TodoNotFound(
-                id.to_string(),
+                id.into(),
             );
 
         assert_app_error!(
@@ -486,7 +486,7 @@ mod tests {
 
         let expected =
             AppError::TodoNotFound(
-                id.to_string(),
+                id.into(),
             );
 
         assert_app_error!(
@@ -571,8 +571,8 @@ mod tests {
             .add(new_todo);
 
         let expected = AppError::DateTimeParseError {
-                input: invalid_date_time.to_string(),
-                expected_format: USER_DATE_TIME_FORMAT.to_string()
+                input: invalid_date_time.into(),
+                expected_format: USER_DATE_TIME_FORMAT.into()
             };
 
         assert_app_error!(
@@ -790,8 +790,8 @@ mod tests {
             .update(&v1.id, &update);
 
         let expected = AppError::DateTimeParseError {
-                input: invalid_date_time.to_string(),
-                expected_format: USER_DATE_TIME_FORMAT.to_string()
+                input: invalid_date_time.into(),
+                expected_format: USER_DATE_TIME_FORMAT.into()
             };
 
         assert_app_error!(
@@ -1119,8 +1119,8 @@ mod tests {
             .search(&query);
 
         let expected = AppError::DateTimeParseError {
-                input: invalid_date_time.to_string(),
-                expected_format: USER_DATE_TIME_FORMAT.to_string()
+                input: invalid_date_time.into(),
+                expected_format: USER_DATE_TIME_FORMAT.into()
             };
 
         assert_app_error!(
@@ -1143,8 +1143,8 @@ mod tests {
             .count_by(&query);
 
         let expected = AppError::DateTimeParseError {
-                input: invalid_date_time.to_string(),
-                expected_format: USER_DATE_TIME_FORMAT.to_string()
+                input: invalid_date_time.into(),
+                expected_format: USER_DATE_TIME_FORMAT.into()
             };
 
         assert_app_error!(
