@@ -133,7 +133,7 @@ pub struct Todo {
 impl Todo {
     fn is_in_id_set(
         &self,
-        ids: &NESet<String>,
+        ids: &NESet<&String>,
     ) -> bool {
         ids.contains(&self.id)
     }
@@ -413,7 +413,7 @@ impl TodoList {
 
     pub fn delete_by_ids(
         &mut self,
-        targets: &NESet<String>,
+        targets: &NESet<&String>,
     ) -> usize {
         self.delete_by(
             targets,
@@ -671,7 +671,7 @@ mod tests {
     ) {
         let invalid_date_time = "abc";
 
-        let new_todo = &NewTodo::builder()
+        let new_todo = NewTodo::builder()
             .title(
                 Title::new("abc")
             )
@@ -682,7 +682,7 @@ mod tests {
             .build();
 
         let actual = new_todo_list!()
-            .add(new_todo);
+            .add(&new_todo);
 
         let expected = AppError::DateTimeParseError {
                 input: invalid_date_time.into(),
@@ -1634,5 +1634,313 @@ mod tests {
         assert_app_error!(
             actual, expected
         )
+    }
+
+    #[test]
+    fn todolist_delete_by_statuses_should_delete_todos_with_specified_statuses(
+    ) {
+        let mut todos =
+            new_todo_list!();
+
+        let items =
+            add_todos(&mut todos)
+                .unwrap();
+        let [
+            todo_a, todo_b, todo_c,
+            todo_d, todo_e, todo_f,
+            todo_g, todo_h, todo_i
+        ] =
+            <[Todo; 9]>::try_from(items)
+                .expect(
+                    "`items` vec should contain 9 elements"
+                );
+
+        let _todo_a = todos
+            .update_status(
+                &todo_a.id,
+                Status::Backlog,
+            )
+            .unwrap();
+        let _todo_b = todos
+            .update_status(
+                &todo_b.id,
+                Status::InProgress,
+            )
+            .unwrap();
+        let _todo_c = todos
+            .update_status(
+                &todo_c.id,
+                Status::Done,
+            )
+            .unwrap();
+        let _todo_d = todos
+            .update_status(
+                &todo_d.id,
+                Status::Backlog,
+            )
+            .unwrap();
+        let _todo_e = todos
+            .update_status(
+                &todo_e.id,
+                Status::InProgress,
+            )
+            .unwrap();
+        let _todo_f = todos
+            .update_status(
+                &todo_f.id,
+                Status::Done,
+            )
+            .unwrap();
+        let _todo_g = todos
+            .update_status(
+                &todo_g.id,
+                Status::Backlog,
+            )
+            .unwrap();
+        let _todo_h = todos
+            .update_status(
+                &todo_h.id,
+                Status::InProgress,
+            )
+            .unwrap();
+        let _todo_i = todos
+            .update_status(
+                &todo_i.id,
+                Status::Done,
+            )
+            .unwrap();
+
+        let deleted_count = todos
+            .delete_by_statuses(&nes![
+                Status::Backlog,
+                Status::Done
+            ]);
+
+        assert_eq!(deleted_count, 6);
+
+        let query = Query::builder()
+            .status(Some(
+                Status::InProgress,
+            ))
+            .build();
+
+        let remaining_count = todos
+            .count_by(&query)
+            .unwrap();
+        let count_all =
+            todos.count_all();
+
+        assert_eq!(
+            remaining_count,
+            count_all
+        );
+        assert_eq!(count_all, 3)
+    }
+
+    #[test]
+    fn todolist_delete_by_priorities_should_delete_todos_with_specified_priorities(
+    ) {
+        let mut todos =
+            new_todo_list!();
+
+        let items =
+            add_todos(&mut todos)
+                .unwrap();
+        let [
+            todo_a, todo_b, todo_c,
+            todo_d, todo_e, todo_f,
+            todo_g, todo_h, todo_i
+        ] =
+            <[Todo; 9]>::try_from(items)
+                .expect(
+                    "`items` vec should contain 9 elements"
+                );
+
+        let _todo_a = todos
+            .update_priority(
+                &todo_a.id,
+                Priority::Medium,
+            )
+            .unwrap();
+        let _todo_b = todos
+            .update_priority(
+                &todo_b.id,
+                Priority::High,
+            )
+            .unwrap();
+        let _todo_c = todos
+            .update_priority(
+                &todo_c.id,
+                Priority::Low,
+            )
+            .unwrap();
+        let _todo_d = todos
+            .update_priority(
+                &todo_d.id,
+                Priority::Medium,
+            )
+            .unwrap();
+        let _todo_e = todos
+            .update_priority(
+                &todo_e.id,
+                Priority::High,
+            )
+            .unwrap();
+        let _todo_f = todos
+            .update_priority(
+                &todo_f.id,
+                Priority::Low,
+            )
+            .unwrap();
+        let _todo_g = todos
+            .update_priority(
+                &todo_g.id,
+                Priority::Medium,
+            )
+            .unwrap();
+        let _todo_h = todos
+            .update_priority(
+                &todo_h.id,
+                Priority::High,
+            )
+            .unwrap();
+        let _todo_i = todos
+            .update_priority(
+                &todo_i.id,
+                Priority::Low,
+            )
+            .unwrap();
+
+        let deleted_count = todos
+            .delete_by_priorities(
+                &nes![
+                    Priority::Medium,
+                    Priority::Low
+                ],
+            );
+
+        assert_eq!(deleted_count, 6);
+
+        let query = Query::builder()
+            .priority(Some(
+                Priority::High,
+            ))
+            .build();
+
+        let remaining_count = todos
+            .count_by(&query)
+            .unwrap();
+        let count_all =
+            todos.count_all();
+
+        assert_eq!(
+            remaining_count,
+            count_all
+        );
+        assert_eq!(count_all, 3);
+    }
+
+    #[test]
+    fn todolist_delete_by_ids_should_delete_todos_with_specified_ids(
+    ) {
+        let mut todos =
+            new_todo_list!();
+
+        let items =
+            add_todos(&mut todos)
+                .unwrap();
+        let [
+            mut todo_a, mut todo_b, mut todo_c,
+            mut todo_d, mut todo_e, mut todo_f,
+            mut todo_g, mut todo_h, mut todo_i
+        ] =
+            <[Todo; 9]>::try_from(items)
+                .expect(
+                    "`items` vec should contain 9 elements"
+                );
+
+        todo_a = todos
+            .update_priority(
+                &todo_a.id,
+                Priority::Medium,
+            )
+            .unwrap();
+        todo_b = todos
+            .update_priority(
+                &todo_b.id,
+                Priority::High,
+            )
+            .unwrap();
+        todo_c = todos
+            .update_priority(
+                &todo_c.id,
+                Priority::Low,
+            )
+            .unwrap();
+        todo_d = todos
+            .update_priority(
+                &todo_d.id,
+                Priority::Medium,
+            )
+            .unwrap();
+        todo_e = todos
+            .update_priority(
+                &todo_e.id,
+                Priority::High,
+            )
+            .unwrap();
+        todo_f = todos
+            .update_priority(
+                &todo_f.id,
+                Priority::Low,
+            )
+            .unwrap();
+        todo_g = todos
+            .update_priority(
+                &todo_g.id,
+                Priority::Medium,
+            )
+            .unwrap();
+        todo_h = todos
+            .update_priority(
+                &todo_h.id,
+                Priority::High,
+            )
+            .unwrap();
+        todo_i = todos
+            .update_priority(
+                &todo_i.id,
+                Priority::Low,
+            )
+            .unwrap();
+
+        let deleted_count = todos
+            .delete_by_ids(&nes![
+                &todo_b.id, &todo_d.id,
+                &todo_f.id, &todo_h.id
+            ]);
+
+        assert_eq!(deleted_count, 4);
+
+        let count_all =
+            todos.count_all();
+
+        assert_eq!(count_all, 5);
+
+        let query = Query::builder()
+            .limit(OptionalResultLimit::some(5))
+            .build();
+
+        let search_result = todos
+            .search(&query)
+            .unwrap();
+
+        assert_eq!(
+            search_result,
+            vec![
+                todo_a, todo_c, todo_e,
+                todo_g, todo_i
+            ]
+        );
     }
 }
