@@ -1120,10 +1120,9 @@ mod tests {
                     .into_iter()
                     .skip(6)
                     .collect::<Vec<_>>()
-            )
-                .expect(
-                    "`items` vec should contain 9 elements"
-                );
+            ).expect(
+                "`items` vec should contain 9 elements"
+            );
 
         let query = Query::builder()
             .priority(Some(
