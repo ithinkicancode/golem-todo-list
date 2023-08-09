@@ -1,5 +1,7 @@
 use crate::{
-    deadline::OptionalDeadlineInput,
+    deadline::{
+        OptionalDeadlineInput, UnixTime,
+    },
     result_limit::OptionalResultLimit,
     todos::{Priority, Status, Todo},
 };
@@ -69,7 +71,7 @@ impl Query {
     }
 
     pub(crate) fn match_deadline(
-        deadline: &Option<i64>,
+        deadline: &Option<UnixTime>,
         todo: &Todo,
     ) -> bool {
         deadline

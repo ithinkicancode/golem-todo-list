@@ -5,6 +5,8 @@ use crate::app_error::{
 use chrono::naive::NaiveDateTime;
 use once_cell::sync::Lazy;
 
+pub(crate) type UnixTime = i64;
+
 pub(crate) const USER_DATE_TIME_FORMAT: &str =
     "%Y-%m-%d %H";
 
@@ -36,7 +38,8 @@ impl OptionalDeadlineInput {
 
     pub(crate) fn unix_time(
         &self,
-    ) -> AppResult<Option<i64>> {
+    ) -> AppResult<Option<UnixTime>>
+    {
         self.0.as_ref().map(|s| {
             let unix_time =
                 NaiveDateTime::parse_from_str(

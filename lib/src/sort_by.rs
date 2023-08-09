@@ -1,4 +1,5 @@
 use crate::{
+    deadline::UnixTime,
     query::QuerySort,
     todos::{Priority, Status, Todo},
 };
@@ -8,7 +9,7 @@ use std::cmp;
     Eq, PartialEq, Ord, PartialOrd,
 )]
 pub(crate) enum SortBy {
-    Deadline(cmp::Reverse<Option<i64>>),
+    Deadline(Option<UnixTime>),
 
     Priority(cmp::Reverse<Priority>),
 
@@ -39,9 +40,7 @@ impl SortBy {
             Some(
                 QuerySort::Deadline,
             ) => SortBy::Deadline(
-                cmp::Reverse(
-                    t.deadline(),
-                ),
+                t.deadline(),
             ),
             None => SortBy::Title(
                 t.title().into(),

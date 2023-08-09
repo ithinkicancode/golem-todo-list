@@ -3,7 +3,8 @@ use crate::{
         bail, report, AppError,
         AppResult,
     },
-    deadline, query, result_limit,
+    deadline::{self, UnixTime},
+    query, result_limit,
     sort_by::SortBy,
     title,
 };
@@ -44,8 +45,8 @@ macro_rules! unix_time_now {
     Sequence,
 )]
 pub enum Status {
-    Backlog,
     InProgress,
+    Backlog,
     Done,
 }
 
@@ -127,7 +128,7 @@ pub struct Todo {
     updated_timestamp: i64,
 
     #[getset(get_copy = "pub")]
-    deadline: Option<i64>,
+    deadline: Option<UnixTime>,
 }
 impl Todo {
     fn is_in_id_set(
@@ -282,7 +283,7 @@ impl TodoList {
     fn filter_by<'a>(
         &'a self,
         query: &'a Query,
-        deadline: &'a Option<i64>,
+        deadline: &'a Option<UnixTime>,
     ) -> impl Iterator<Item = &Todo>
     {
         self.0
@@ -471,10 +472,7 @@ mod tests {
     use maplit::hashset;
     use memoize::memoize;
     use pretty_assertions::assert_eq;
-    use std::{
-        collections::HashSet,
-        iter::repeat,
-    };
+    use std::collections::HashSet;
 
     macro_rules! new_todo_list {
         () => {
@@ -503,10 +501,55 @@ mod tests {
         }
     }
 
+    impl TodoList {
+        fn update_status(
+            &mut self,
+            id: &str,
+            status: Status,
+        ) -> AppResult<Todo> {
+            self.update(
+                id,
+                &UpdateTodo::builder()
+                    .status(Some(
+                        status,
+                    ))
+                    .build(),
+            )
+        }
+
+        fn update_priority(
+            &mut self,
+            id: &str,
+            priority: Priority,
+        ) -> AppResult<Todo> {
+            self.update(
+                id,
+                &UpdateTodo::builder()
+                    .priority(Some(
+                        priority,
+                    ))
+                    .build(),
+            )
+        }
+
+        fn update_deadline(
+            &mut self,
+            id: &str,
+            deadline: OptionalDeadlineInput,
+        ) -> AppResult<Todo> {
+            self.update(
+                id,
+                &UpdateTodo::builder()
+                    .deadline(deadline)
+                    .build(),
+            )
+        }
+    }
+
     #[memoize]
     fn too_long_title() -> String {
-        repeat('a')
-            .take(Title::MAX_LEN + 1)
+        ['a'; Title::MAX_LEN + 1]
+            .into_iter()
             .collect()
     }
 
@@ -1082,6 +1125,7 @@ mod tests {
                 Priority::High,
             ))
             .build();
+
         let actual: HashSet<_> = todos
             .search(&query)
             .unwrap()
@@ -1115,40 +1159,47 @@ mod tests {
                     "`items` vec should contain 9 elements"
                 );
 
-        // sort by priority
-        let mut actual_highs = todos
-            .search(
-                &Query::builder()
-                    .limit(
-                        OptionalResultLimit::some(5)
-                    )
-                    .sort(Some(QuerySort::Priority))
-                    .build()
+        let query = Query::builder()
+            .limit(
+                OptionalResultLimit::some(5)
             )
+            .sort(Some(QuerySort::Priority))
+            .build();
+
+        let search_result = todos
+            .search(&query)
             .unwrap();
 
-        let split_at = 3;
+        let chunk_count = 2;
 
-        let actual_mediums: HashSet<_> =
-            actual_highs
-                .split_off(split_at)
-                .into_iter()
-                .collect();
+        let chunks: Vec<_> = search_result
+            .chunks(3)
+            .map(|chunk| {
+                chunk.into_iter().collect::<HashSet<_>>()
+            })
+            .take(chunk_count)
+            .collect();
 
-        let actual_highs: HashSet<_> =
-            actual_highs
-                .into_iter()
-                .collect();
+        let [
+            actual_highs,
+            actual_mediums
+        ] =
+            <[HashSet<_>; 2]>::try_from(chunks).expect(
+                format!(
+                    "`chunks` vec should contain {} elements",
+                    chunk_count
+                ).as_str()
+            );
 
         let expected_highs = hashset! {
-            todo_g,
-            todo_h,
-            todo_i,
+            &todo_g,
+            &todo_h,
+            &todo_i,
         };
         let expected_mediums = hashset! {
-            todo_d.clone(),
-            todo_e.clone(),
-            todo_f,
+            &todo_d,
+            &todo_e,
+            &todo_f,
         };
 
         assert_eq!(
@@ -1161,14 +1212,14 @@ mod tests {
             ));
 
         // sort by title alphabetically
-        let actual = todos
-            .search(
-                &Query::builder()
-                    .limit(
-                        OptionalResultLimit::some(5)
-                    )
-                    .build(),
+        let query = Query::builder()
+            .limit(
+                OptionalResultLimit::some(5)
             )
+            .build();
+
+        let actual = todos
+            .search(&query)
             .unwrap();
 
         let expected = vec![
@@ -1177,6 +1228,364 @@ mod tests {
         ];
 
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn todolist_search_should_sort_todos_by_status_in_order_of_inprogress_backlog_done(
+    ) {
+        let mut todos =
+            new_todo_list!();
+
+        let items =
+            add_todos(&mut todos)
+                .unwrap();
+        let [
+            mut todo_a, mut todo_b, mut todo_c,
+            mut todo_d, mut todo_e, mut todo_f,
+            mut todo_g, mut todo_h, mut todo_i
+        ] =
+            <[Todo; 9]>::try_from(items)
+                .expect(
+                    "`items` vec should contain 9 elements"
+                );
+
+        todo_a = todos
+            .update_status(
+                &todo_a.id,
+                Status::Backlog,
+            )
+            .unwrap();
+        todo_b = todos
+            .update_status(
+                &todo_b.id,
+                Status::InProgress,
+            )
+            .unwrap();
+        todo_c = todos
+            .update_status(
+                &todo_c.id,
+                Status::Done,
+            )
+            .unwrap();
+        todo_d = todos
+            .update_status(
+                &todo_d.id,
+                Status::Backlog,
+            )
+            .unwrap();
+        todo_e = todos
+            .update_status(
+                &todo_e.id,
+                Status::InProgress,
+            )
+            .unwrap();
+        todo_f = todos
+            .update_status(
+                &todo_f.id,
+                Status::Done,
+            )
+            .unwrap();
+        todo_g = todos
+            .update_status(
+                &todo_g.id,
+                Status::Backlog,
+            )
+            .unwrap();
+        todo_h = todos
+            .update_status(
+                &todo_h.id,
+                Status::InProgress,
+            )
+            .unwrap();
+        todo_i = todos
+            .update_status(
+                &todo_i.id,
+                Status::Done,
+            )
+            .unwrap();
+
+        let query = Query::builder()
+            .sort(Some(
+                QuerySort::Status,
+            ))
+            .build();
+
+        let search_result = todos
+            .search(&query)
+            .unwrap();
+
+        let chunk_count = 3;
+        let chunks: Vec<_> = search_result
+            .chunks(3)
+            .map(|chunk| {
+                chunk.into_iter().collect::<HashSet<_>>()
+            })
+            .take(chunk_count)
+            .collect();
+
+        let [
+            actual_in_progress,
+            actual_backlog,
+            actual_done,
+        ] =
+            <[HashSet<_>; 3]>::try_from(chunks).expect(
+                format!(
+                    "`chunks` vec should contain {} elements",
+                    chunk_count
+                ).as_str()
+            );
+
+        assert_eq!(
+            actual_in_progress,
+            hashset! {
+                &todo_b,
+                &todo_e,
+                &todo_h
+            }
+        );
+        assert_eq!(
+            actual_backlog,
+            hashset! {
+                &todo_a,
+                &todo_d,
+                &todo_g
+            }
+        );
+        assert_eq!(
+            actual_done,
+            hashset! {
+                &todo_c,
+                &todo_f,
+                &todo_i
+            }
+        );
+    }
+
+    #[test]
+    fn todolist_search_should_sort_todos_by_priority_in_order_of_high_medium_low(
+    ) {
+        let mut todos =
+            new_todo_list!();
+
+        let items =
+            add_todos(&mut todos)
+                .unwrap();
+        let [
+            mut todo_a, mut todo_b, mut todo_c,
+            mut todo_d, mut todo_e, mut todo_f,
+            mut todo_g, mut todo_h, mut todo_i
+        ] =
+            <[Todo; 9]>::try_from(items)
+                .expect(
+                    "`items` vec should contain 9 elements"
+                );
+
+        todo_a = todos
+            .update_priority(
+                &todo_a.id,
+                Priority::Medium,
+            )
+            .unwrap();
+        todo_b = todos
+            .update_priority(
+                &todo_b.id,
+                Priority::High,
+            )
+            .unwrap();
+        todo_c = todos
+            .update_priority(
+                &todo_c.id,
+                Priority::Low,
+            )
+            .unwrap();
+        todo_d = todos
+            .update_priority(
+                &todo_d.id,
+                Priority::Medium,
+            )
+            .unwrap();
+        todo_e = todos
+            .update_priority(
+                &todo_e.id,
+                Priority::High,
+            )
+            .unwrap();
+        todo_f = todos
+            .update_priority(
+                &todo_f.id,
+                Priority::Low,
+            )
+            .unwrap();
+        todo_g = todos
+            .update_priority(
+                &todo_g.id,
+                Priority::Medium,
+            )
+            .unwrap();
+        todo_h = todos
+            .update_priority(
+                &todo_h.id,
+                Priority::High,
+            )
+            .unwrap();
+        todo_i = todos
+            .update_priority(
+                &todo_i.id,
+                Priority::Low,
+            )
+            .unwrap();
+
+        let query = Query::builder()
+            .sort(Some(
+                QuerySort::Priority,
+            ))
+            .build();
+
+        let search_result = todos
+            .search(&query)
+            .unwrap();
+
+        let chunk_count = 3;
+        let chunks: Vec<_> = search_result
+            .chunks(3)
+            .map(|chunk| {
+                chunk.into_iter().collect::<HashSet<_>>()
+            })
+            .take(chunk_count)
+            .collect();
+
+        let [
+            actual_highs,
+            actual_meds,
+            actual_lows,
+        ] =
+            <[HashSet<_>; 3]>::try_from(chunks).expect(
+                format!(
+                    "`chunks` vec should contain {} elements",
+                    chunk_count
+                ).as_str()
+            );
+
+        assert_eq!(
+            actual_highs,
+            hashset! {
+                &todo_b,
+                &todo_e,
+                &todo_h
+            }
+        );
+        assert_eq!(
+            actual_meds,
+            hashset! {
+                &todo_a,
+                &todo_d,
+                &todo_g
+            }
+        );
+        assert_eq!(
+            actual_lows,
+            hashset! {
+                &todo_c,
+                &todo_f,
+                &todo_i
+            }
+        );
+    }
+
+    #[test]
+    fn todolist_search_should_sort_todos_by_deadline_in_ascending_order(
+    ) {
+        let mut todos =
+            new_todo_list!();
+
+        let items =
+            add_todos(&mut todos)
+                .unwrap();
+        let [
+            mut todo_a, mut todo_b, mut todo_c,
+            todo_d, todo_e, mut todo_f,
+            todo_g, mut todo_h, todo_i
+        ] =
+            <[Todo; 9]>::try_from(items)
+                .expect(
+                    "`items` vec should contain 9 elements"
+                );
+
+        todo_a = todos
+            .update_deadline(
+                &todo_a.id,
+                OptionalDeadlineInput::some("2022-01-10 00")
+            )
+            .unwrap();
+        todo_b = todos
+            .update_deadline(
+                &todo_b.id,
+                OptionalDeadlineInput::some("2022-01-07 00")
+            )
+            .unwrap();
+        todo_c = todos
+            .update_deadline(
+                &todo_c.id,
+                OptionalDeadlineInput::some("2022-01-01 00")
+            )
+            .unwrap();
+        let _todo_d = todos
+            .update_deadline(
+                &todo_d.id,
+                OptionalDeadlineInput::some("2022-01-22 00")
+            )
+            .unwrap();
+        let _todo_e = todos
+            .update_deadline(
+                &todo_e.id,
+                OptionalDeadlineInput::some("2022-02-01 00")
+            )
+            .unwrap();
+        todo_f = todos
+            .update_deadline(
+                &todo_f.id,
+                OptionalDeadlineInput::some("2022-01-03 00")
+            )
+            .unwrap();
+        let _todo_g = todos
+            .update_deadline(
+                &todo_g.id,
+                OptionalDeadlineInput::some("2022-02-06 00")
+            )
+            .unwrap();
+        todo_h = todos
+            .update_deadline(
+                &todo_h.id,
+                OptionalDeadlineInput::some("2022-01-18 00")
+            )
+            .unwrap();
+        let _todo_i = todos
+            .update_deadline(
+                &todo_i.id,
+                OptionalDeadlineInput::some("2022-01-26 00")
+            )
+            .unwrap();
+
+        let query = Query::builder()
+            .sort(Some(
+                QuerySort::Deadline,
+            ))
+            .limit(
+                OptionalResultLimit::some(5)
+            )
+            .build();
+
+        let search_result = todos
+            .search(&query)
+            .unwrap();
+
+        assert_eq!(
+            search_result,
+            vec![
+                todo_c, todo_f, todo_b,
+                todo_a, todo_h
+            ]
+        );
     }
 
     #[test]
