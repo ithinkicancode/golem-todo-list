@@ -11,6 +11,9 @@ use binary_heap_plus::BinaryHeap;
 use chrono::Utc;
 use enum_iterator::Sequence;
 use getset::{CopyGetters, Getters};
+use nonempty_collections::{
+    nes, NESet,
+};
 use std::collections::HashMap;
 use typed_builder::TypedBuilder;
 use uuid::Uuid;
@@ -125,6 +128,29 @@ pub struct Todo {
 
     #[getset(get_copy = "pub")]
     deadline: Option<i64>,
+}
+impl Todo {
+    fn is_in_id_set(
+        &self,
+        ids: &NESet<String>,
+    ) -> bool {
+        ids.contains(&self.id)
+    }
+
+    fn is_in_priority_set(
+        &self,
+        priorities: &NESet<Priority>,
+    ) -> bool {
+        priorities
+            .contains(&self.priority)
+    }
+
+    fn is_in_status_set(
+        &self,
+        statuses: &NESet<Status>,
+    ) -> bool {
+        statuses.contains(&self.status)
+    }
 }
 
 #[derive(Default)]
@@ -365,16 +391,15 @@ impl TodoList {
             })
     }
 
-    pub fn delete_by_status(
+    fn delete_by<T>(
         &mut self,
-        target_status: &Status,
+        targets: &NESet<T>,
+        p: impl Fn(&Todo, &NESet<T>) -> bool,
     ) -> usize {
         let mut count = 0;
 
         self.0.retain(|_, item| {
-            if item.status
-                == *target_status
-            {
+            if p(item, targets) {
                 count += 1;
                 false
             } else {
@@ -383,6 +408,45 @@ impl TodoList {
         });
 
         count
+    }
+
+    pub fn delete_by_ids(
+        &mut self,
+        targets: &NESet<String>,
+    ) -> usize {
+        self.delete_by(
+            targets,
+            Todo::is_in_id_set,
+        )
+    }
+
+    pub fn delete_by_priorities(
+        &mut self,
+        targets: &NESet<Priority>,
+    ) -> usize {
+        self.delete_by(
+            targets,
+            Todo::is_in_priority_set,
+        )
+    }
+
+    pub fn delete_by_statuses(
+        &mut self,
+        targets: &NESet<Status>,
+    ) -> usize {
+        self.delete_by(
+            targets,
+            Todo::is_in_status_set,
+        )
+    }
+
+    pub fn delete_by_status(
+        &mut self,
+        target: &Status,
+    ) -> usize {
+        self.delete_by_statuses(&nes![
+            *target
+        ])
     }
 
     pub fn delete_all(
