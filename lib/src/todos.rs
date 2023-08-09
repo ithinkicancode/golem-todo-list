@@ -1113,9 +1113,14 @@ mod tests {
             add_todos(&mut todos)
                 .unwrap();
         let [
-            _, _, _, _, _, _, todo_g, todo_h, todo_i
+            todo_g, todo_h, todo_i
         ] =
-            <[Todo; 9]>::try_from(items)
+            <[Todo; 3]>::try_from(
+                items
+                    .into_iter()
+                    .skip(6)
+                    .collect::<Vec<_>>()
+            )
                 .expect(
                     "`items` vec should contain 9 elements"
                 );
