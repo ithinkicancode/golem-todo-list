@@ -122,10 +122,10 @@ pub struct Todo {
     status: Status,
 
     #[getset(get_copy = "pub")]
-    created_timestamp: i64,
+    created_timestamp: UnixTime,
 
     #[getset(get_copy = "pub")]
-    updated_timestamp: i64,
+    updated_timestamp: UnixTime,
 
     #[getset(get_copy = "pub")]
     deadline: Option<UnixTime>,
@@ -1319,6 +1319,7 @@ mod tests {
             .unwrap();
 
         let chunk_count = 3;
+
         let chunks: Vec<_> = search_result
             .chunks(3)
             .map(|chunk| {
@@ -1450,6 +1451,7 @@ mod tests {
             .unwrap();
 
         let chunk_count = 3;
+
         let chunks: Vec<_> = search_result
             .chunks(3)
             .map(|chunk| {
