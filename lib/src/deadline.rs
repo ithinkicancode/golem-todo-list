@@ -43,7 +43,7 @@ impl OptionalDeadlineInput {
         self.0.as_ref().map(|s| {
             let unix_time =
                 NaiveDateTime::parse_from_str(
-                    &format!("{}:00:00", s),
+                    &format!("{}:00:00", s.trim()),
                     &DATE_TIME_FORMAT
                 )
                 .into_report()
@@ -82,13 +82,18 @@ mod tests {
 
     #[test_case(
         "2022-01-01 09",
-        1641027600 ;
+        1_641_027_600 ;
         "epoch of 2022-01-01 09 hour should be 1641027600"
     )]
     #[test_case(
         "1970-01-01 00",
         0 ;
         "epoch of 1970-01-01 00 hour should be 0"
+    )]
+    #[test_case(
+        "  2222-12-31 23  ",
+        7_983_874_800 ;
+        "epoch of 2222-12-31 23 hour should be 1641027600"
     )]
     fn unix_time_should_succeed_with_expected_unix_time(
         input: &str,
@@ -121,6 +126,7 @@ mod tests {
 
     #[test_case("2022-01-01")]
     #[test_case("abc")]
+    #[test_case("2021-02-29 01")]
     fn unix_time_should_fail_when_input_does_not_match_expected_date_time_format(
         input: &str,
     ) {
