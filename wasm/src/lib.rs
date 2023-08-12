@@ -106,7 +106,6 @@ struct AppState(TodoList);
 
 static mut APP_STATE: Lazy<AppState> = Lazy::new(|| AppState(TodoList::new()));
 
-// #[allow(clippy::some_unsafe_lint)]
 fn with_app_state<T>(f: impl FnOnce(&mut AppState) -> T) -> T {
     unsafe { f(&mut APP_STATE) }
 }
