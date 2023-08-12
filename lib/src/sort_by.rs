@@ -1,5 +1,5 @@
 use crate::{
-    deadline::UnixTime,
+    core::UnixTime,
     query::QuerySort,
     todos::{Priority, Status, Todo},
 };

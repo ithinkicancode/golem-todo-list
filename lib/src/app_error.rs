@@ -3,6 +3,7 @@ use kinded::Kinded;
 use std::fmt::{
     self, Display, Formatter,
 };
+use uuid::Uuid;
 
 pub type AppResult<T> =
     error_stack::Result<T, AppError>;
@@ -35,11 +36,12 @@ pub enum AppError {
         expected_format: String,
     },
     EmptyTodoTitle,
+    InvalidUuid(String),
     TooLongTodoTitle {
         input: String,
         expected_len: usize,
     },
-    TodoNotFound(String),
+    TodoNotFound(Uuid),
     UpdateHasNoChanges,
 }
 
@@ -80,6 +82,14 @@ impl Display for AppError {
             },
             EmptyTodoTitle => {
                 write!(f, "[{:?}] Title cannot be empty.", EmptyTodoTitle)
+            },
+            InvalidUuid(s) => {
+                write!(
+                    f,
+                    "[{:?}] Invalid UUID '{}'.",
+                    AppErrorKind::InvalidUuid,
+                    s
+                )
             },
             TooLongTodoTitle {
                 input,

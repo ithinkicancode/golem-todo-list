@@ -3,8 +3,8 @@ use crate::{
         bail, report, AppError,
         AppResult,
     },
-    deadline::{self, UnixTime},
-    query, result_limit,
+    core::UnixTime,
+    deadline, query, result_limit,
     sort_by::SortBy,
     title,
 };
@@ -110,7 +110,7 @@ impl UpdateTodo {
 )]
 pub struct Todo {
     #[getset(get = "pub")]
-    id: String,
+    id: Uuid,
 
     #[getset(get = "pub")]
     title: String,
@@ -133,7 +133,7 @@ pub struct Todo {
 impl Todo {
     fn is_in_id_set(
         &self,
-        ids: &NESet<&String>,
+        ids: &NESet<Uuid>,
     ) -> bool {
         ids.contains(&self.id)
     }
@@ -156,7 +156,7 @@ impl Todo {
 
 #[derive(Default)]
 pub struct TodoList(
-    HashMap<String, Todo>,
+    HashMap<Uuid, Todo>,
 );
 impl TodoList {
     pub fn new() -> Self {
@@ -174,8 +174,7 @@ impl TodoList {
         let title =
             item.title.validated()?;
 
-        let id =
-            Uuid::new_v4().to_string();
+        let id = Uuid::new_v4();
 
         let now = unix_time_now!();
 
@@ -191,17 +190,14 @@ impl TodoList {
 
         let result = todo.clone();
 
-        self.0.insert(
-            todo.id.clone(),
-            todo,
-        );
+        self.0.insert(todo.id, todo);
 
         Ok(result)
     }
 
     pub fn update(
         &mut self,
-        id: &str,
+        id: Uuid,
         change: &UpdateTodo,
     ) -> AppResult<Todo> {
         if change.change_is_present() {
@@ -211,7 +207,7 @@ impl TodoList {
                     .unix_time()?;
 
             if let Some(todo) =
-                self.0.get_mut(id)
+                self.0.get_mut(&id)
             {
                 let mut modified =
                     false;
@@ -270,7 +266,7 @@ impl TodoList {
                 Ok(todo.clone())
             } else {
                 bail!(
-                    AppError::TodoNotFound(id.into())
+                    AppError::TodoNotFound(id)
                 )
             }
         } else {
@@ -364,13 +360,12 @@ impl TodoList {
 
     pub fn get(
         &self,
-        id: &str,
+        id: Uuid,
     ) -> AppResult<Todo> {
         self.0
-            .get(id)
+            .get(&id)
             .cloned()
-            .ok_or_else(|| id.into())
-            .map_err(|id| {
+            .ok_or_else(|| {
                 report!(
                     AppError::TodoNotFound(id)
                 )
@@ -379,13 +374,12 @@ impl TodoList {
 
     pub fn delete(
         &mut self,
-        id: &str,
+        id: Uuid,
     ) -> AppResult<()> {
         self.0
-            .remove(id)
+            .remove(&id)
             .map(|_| ())
-            .ok_or_else(|| id.into())
-            .map_err(|id| {
+            .ok_or_else(|| {
                 report!(
                     AppError::TodoNotFound(id)
                 )
@@ -395,16 +389,22 @@ impl TodoList {
     fn delete_by<T>(
         &mut self,
         targets: &NESet<T>,
-        p: impl Fn(&Todo, &NESet<T>) -> bool,
+        should_delete: impl Fn(
+            &Todo,
+            &NESet<T>,
+        )
+            -> bool,
     ) -> usize {
         let mut count = 0;
 
         self.0.retain(|_, item| {
-            if p(item, targets) {
+            !{
+                should_delete(
+                    item, targets,
+                )
+            } || {
                 count += 1;
                 false
-            } else {
-                true
             }
         });
 
@@ -413,7 +413,7 @@ impl TodoList {
 
     pub fn delete_by_ids(
         &mut self,
-        targets: &NESet<&String>,
+        targets: &NESet<Uuid>,
     ) -> usize {
         self.delete_by(
             targets,
@@ -473,6 +473,7 @@ mod tests {
     use memoize::memoize;
     use pretty_assertions::assert_eq;
     use std::collections::HashSet;
+    use uuid::uuid;
 
     macro_rules! new_todo_list {
         () => {
@@ -504,7 +505,7 @@ mod tests {
     impl TodoList {
         fn update_status(
             &mut self,
-            id: &str,
+            id: Uuid,
             status: Status,
         ) -> AppResult<Todo> {
             self.update(
@@ -519,7 +520,7 @@ mod tests {
 
         fn update_priority(
             &mut self,
-            id: &str,
+            id: Uuid,
             priority: Priority,
         ) -> AppResult<Todo> {
             self.update(
@@ -534,7 +535,7 @@ mod tests {
 
         fn update_deadline(
             &mut self,
-            id: &str,
+            id: Uuid,
             deadline: OptionalDeadlineInput,
         ) -> AppResult<Todo> {
             self.update(
@@ -562,17 +563,17 @@ mod tests {
             .is_empty());
     }
 
+    const NON_EXISTENT_ID: Uuid = uuid!("67e55044-10b1-426f-9247-bb680e5fe0c8");
+
     #[test]
     fn todolist_get_should_fail_when_there_is_no_todos(
     ) {
-        let id = "not-exist";
-
-        let actual =
-            new_todo_list!().get(id);
+        let actual = new_todo_list!()
+            .get(NON_EXISTENT_ID);
 
         let expected =
             AppError::TodoNotFound(
-                id.into(),
+                NON_EXISTENT_ID,
             );
 
         assert_app_error!(
@@ -593,14 +594,12 @@ mod tests {
     #[test]
     fn todolist_delete_should_fail_when_there_is_no_todos(
     ) {
-        let id = "not-exist";
-
-        let actual =
-            new_todo_list!().delete(id);
+        let actual = new_todo_list!()
+            .delete(NON_EXISTENT_ID);
 
         let expected =
             AppError::TodoNotFound(
-                id.into(),
+                NON_EXISTENT_ID,
             );
 
         assert_app_error!(
@@ -770,11 +769,11 @@ mod tests {
                 .build();
 
         let v2 = todos
-            .update(&v1.id, &update)
+            .update(v1.id, &update)
             .unwrap();
 
         let item =
-            todos.get(&v1.id).unwrap();
+            todos.get(v1.id).unwrap();
 
         assert_eq!(v2, item);
     }
@@ -797,7 +796,7 @@ mod tests {
             UpdateTodo::empty();
 
         let actual = todos
-            .update(&v1.id, &update);
+            .update(v1.id, &update);
 
         let expected =
             AppError::UpdateHasNoChanges;
@@ -829,7 +828,7 @@ mod tests {
                 .build();
 
         let actual = todos
-            .update(&v1.id, &update);
+            .update(v1.id, &update);
 
         let expected =
             AppError::EmptyTodoTitle;
@@ -865,7 +864,7 @@ mod tests {
                 .build();
 
         let actual = todos
-            .update(&v1.id, &update);
+            .update(v1.id, &update);
 
         let expected = AppError::TooLongTodoTitle {
                 input: title,
@@ -901,7 +900,7 @@ mod tests {
                 .build();
 
         let actual = todos
-            .update(&v1.id, &update);
+            .update(v1.id, &update);
 
         let expected = AppError::DateTimeParseError {
                 input: invalid_date_time.into(),
@@ -1036,12 +1035,11 @@ mod tests {
         let count = items.len();
 
         for item in &items {
-            assert_eq!(
-                todos
-                    .get(&item.id)
-                    .unwrap(),
-                *item
-            )
+            let actual = todos
+                .get(item.id)
+                .unwrap();
+
+            assert_eq!(actual, *item)
         }
 
         let search_for_done_items =
@@ -1069,7 +1067,7 @@ mod tests {
                     .build();
             let updated = todos
                 .update(
-                    &item.id, &update,
+                    item.id, &update,
                 )
                 .unwrap();
 
@@ -1255,55 +1253,55 @@ mod tests {
 
         todo_a = todos
             .update_status(
-                &todo_a.id,
+                todo_a.id,
                 Status::Backlog,
             )
             .unwrap();
         todo_b = todos
             .update_status(
-                &todo_b.id,
+                todo_b.id,
                 Status::InProgress,
             )
             .unwrap();
         todo_c = todos
             .update_status(
-                &todo_c.id,
+                todo_c.id,
                 Status::Done,
             )
             .unwrap();
         todo_d = todos
             .update_status(
-                &todo_d.id,
+                todo_d.id,
                 Status::Backlog,
             )
             .unwrap();
         todo_e = todos
             .update_status(
-                &todo_e.id,
+                todo_e.id,
                 Status::InProgress,
             )
             .unwrap();
         todo_f = todos
             .update_status(
-                &todo_f.id,
+                todo_f.id,
                 Status::Done,
             )
             .unwrap();
         todo_g = todos
             .update_status(
-                &todo_g.id,
+                todo_g.id,
                 Status::Backlog,
             )
             .unwrap();
         todo_h = todos
             .update_status(
-                &todo_h.id,
+                todo_h.id,
                 Status::InProgress,
             )
             .unwrap();
         todo_i = todos
             .update_status(
-                &todo_i.id,
+                todo_i.id,
                 Status::Done,
             )
             .unwrap();
@@ -1387,55 +1385,55 @@ mod tests {
 
         todo_a = todos
             .update_priority(
-                &todo_a.id,
+                todo_a.id,
                 Priority::Medium,
             )
             .unwrap();
         todo_b = todos
             .update_priority(
-                &todo_b.id,
+                todo_b.id,
                 Priority::High,
             )
             .unwrap();
         todo_c = todos
             .update_priority(
-                &todo_c.id,
+                todo_c.id,
                 Priority::Low,
             )
             .unwrap();
         todo_d = todos
             .update_priority(
-                &todo_d.id,
+                todo_d.id,
                 Priority::Medium,
             )
             .unwrap();
         todo_e = todos
             .update_priority(
-                &todo_e.id,
+                todo_e.id,
                 Priority::High,
             )
             .unwrap();
         todo_f = todos
             .update_priority(
-                &todo_f.id,
+                todo_f.id,
                 Priority::Low,
             )
             .unwrap();
         todo_g = todos
             .update_priority(
-                &todo_g.id,
+                todo_g.id,
                 Priority::Medium,
             )
             .unwrap();
         todo_h = todos
             .update_priority(
-                &todo_h.id,
+                todo_h.id,
                 Priority::High,
             )
             .unwrap();
         todo_i = todos
             .update_priority(
-                &todo_i.id,
+                todo_i.id,
                 Priority::Low,
             )
             .unwrap();
@@ -1519,55 +1517,55 @@ mod tests {
 
         todo_a = todos
             .update_deadline(
-                &todo_a.id,
+                todo_a.id,
                 OptionalDeadlineInput::some("2022-01-10 00")
             )
             .unwrap();
         todo_b = todos
             .update_deadline(
-                &todo_b.id,
+                todo_b.id,
                 OptionalDeadlineInput::some("2022-01-07 00")
             )
             .unwrap();
         todo_c = todos
             .update_deadline(
-                &todo_c.id,
+                todo_c.id,
                 OptionalDeadlineInput::some("2022-01-01 00")
             )
             .unwrap();
         let _todo_d = todos
             .update_deadline(
-                &todo_d.id,
+                todo_d.id,
                 OptionalDeadlineInput::some("2022-01-22 00")
             )
             .unwrap();
         let _todo_e = todos
             .update_deadline(
-                &todo_e.id,
+                todo_e.id,
                 OptionalDeadlineInput::some("2022-02-01 00")
             )
             .unwrap();
         todo_f = todos
             .update_deadline(
-                &todo_f.id,
+                todo_f.id,
                 OptionalDeadlineInput::some("2022-01-03 00")
             )
             .unwrap();
         let _todo_g = todos
             .update_deadline(
-                &todo_g.id,
+                todo_g.id,
                 OptionalDeadlineInput::some("2022-02-06 00")
             )
             .unwrap();
         todo_h = todos
             .update_deadline(
-                &todo_h.id,
+                todo_h.id,
                 OptionalDeadlineInput::some("2022-01-18 00")
             )
             .unwrap();
         let _todo_i = todos
             .update_deadline(
-                &todo_i.id,
+                todo_i.id,
                 OptionalDeadlineInput::some("2022-01-26 00")
             )
             .unwrap();
@@ -1663,55 +1661,55 @@ mod tests {
 
         let _todo_a = todos
             .update_status(
-                &todo_a.id,
+                todo_a.id,
                 Status::Backlog,
             )
             .unwrap();
         let _todo_b = todos
             .update_status(
-                &todo_b.id,
+                todo_b.id,
                 Status::InProgress,
             )
             .unwrap();
         let _todo_c = todos
             .update_status(
-                &todo_c.id,
+                todo_c.id,
                 Status::Done,
             )
             .unwrap();
         let _todo_d = todos
             .update_status(
-                &todo_d.id,
+                todo_d.id,
                 Status::Backlog,
             )
             .unwrap();
         let _todo_e = todos
             .update_status(
-                &todo_e.id,
+                todo_e.id,
                 Status::InProgress,
             )
             .unwrap();
         let _todo_f = todos
             .update_status(
-                &todo_f.id,
+                todo_f.id,
                 Status::Done,
             )
             .unwrap();
         let _todo_g = todos
             .update_status(
-                &todo_g.id,
+                todo_g.id,
                 Status::Backlog,
             )
             .unwrap();
         let _todo_h = todos
             .update_status(
-                &todo_h.id,
+                todo_h.id,
                 Status::InProgress,
             )
             .unwrap();
         let _todo_i = todos
             .update_status(
-                &todo_i.id,
+                todo_i.id,
                 Status::Done,
             )
             .unwrap();
@@ -1764,55 +1762,55 @@ mod tests {
 
         let _todo_a = todos
             .update_priority(
-                &todo_a.id,
+                todo_a.id,
                 Priority::Medium,
             )
             .unwrap();
         let _todo_b = todos
             .update_priority(
-                &todo_b.id,
+                todo_b.id,
                 Priority::High,
             )
             .unwrap();
         let _todo_c = todos
             .update_priority(
-                &todo_c.id,
+                todo_c.id,
                 Priority::Low,
             )
             .unwrap();
         let _todo_d = todos
             .update_priority(
-                &todo_d.id,
+                todo_d.id,
                 Priority::Medium,
             )
             .unwrap();
         let _todo_e = todos
             .update_priority(
-                &todo_e.id,
+                todo_e.id,
                 Priority::High,
             )
             .unwrap();
         let _todo_f = todos
             .update_priority(
-                &todo_f.id,
+                todo_f.id,
                 Priority::Low,
             )
             .unwrap();
         let _todo_g = todos
             .update_priority(
-                &todo_g.id,
+                todo_g.id,
                 Priority::Medium,
             )
             .unwrap();
         let _todo_h = todos
             .update_priority(
-                &todo_h.id,
+                todo_h.id,
                 Priority::High,
             )
             .unwrap();
         let _todo_i = todos
             .update_priority(
-                &todo_i.id,
+                todo_i.id,
                 Priority::Low,
             )
             .unwrap();
@@ -1867,63 +1865,63 @@ mod tests {
 
         todo_a = todos
             .update_priority(
-                &todo_a.id,
+                todo_a.id,
                 Priority::Medium,
             )
             .unwrap();
         todo_b = todos
             .update_priority(
-                &todo_b.id,
+                todo_b.id,
                 Priority::High,
             )
             .unwrap();
         todo_c = todos
             .update_priority(
-                &todo_c.id,
+                todo_c.id,
                 Priority::Low,
             )
             .unwrap();
         todo_d = todos
             .update_priority(
-                &todo_d.id,
+                todo_d.id,
                 Priority::Medium,
             )
             .unwrap();
         todo_e = todos
             .update_priority(
-                &todo_e.id,
+                todo_e.id,
                 Priority::High,
             )
             .unwrap();
         todo_f = todos
             .update_priority(
-                &todo_f.id,
+                todo_f.id,
                 Priority::Low,
             )
             .unwrap();
         todo_g = todos
             .update_priority(
-                &todo_g.id,
+                todo_g.id,
                 Priority::Medium,
             )
             .unwrap();
         todo_h = todos
             .update_priority(
-                &todo_h.id,
+                todo_h.id,
                 Priority::High,
             )
             .unwrap();
         todo_i = todos
             .update_priority(
-                &todo_i.id,
+                todo_i.id,
                 Priority::Low,
             )
             .unwrap();
 
         let deleted_count = todos
             .delete_by_ids(&nes![
-                &todo_b.id, &todo_d.id,
-                &todo_f.id, &todo_h.id
+                todo_b.id, todo_d.id,
+                todo_f.id, todo_h.id
             ]);
 
         assert_eq!(deleted_count, 4);

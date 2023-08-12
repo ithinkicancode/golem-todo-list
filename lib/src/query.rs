@@ -1,7 +1,6 @@
 use crate::{
-    deadline::{
-        OptionalDeadlineInput, UnixTime,
-    },
+    core::UnixTime,
+    deadline::OptionalDeadlineInput,
     result_limit::OptionalResultLimit,
     todos::{Priority, Status, Todo},
 };

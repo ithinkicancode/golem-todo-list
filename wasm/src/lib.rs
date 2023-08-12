@@ -1,7 +1,7 @@
 use bindings::{export, exports::golem::todos::api::*};
 use lib::{
     app_error::AppResultExt,
-    core::{u64_from, AppResult},
+    core::{u64_from, uuid_from, AppResult},
     todos::{self, OptionalDeadlineInput, OptionalResultLimit, Title, TodoList},
 };
 use once_cell::sync::Lazy;
@@ -92,7 +92,7 @@ fn filter_from_incoming(filter: Filter) -> todos::Query {
 
 fn todo_for_outgoing(t: todos::Todo) -> Todo {
     Todo {
-        id: t.id().into(),
+        id: t.id().to_string(),
         title: t.title().into(),
         priority: priority_for_outgoing(t.priority()),
         deadline: t.deadline(),
@@ -106,6 +106,7 @@ struct AppState(TodoList);
 
 static mut APP_STATE: Lazy<AppState> = Lazy::new(|| AppState(TodoList::new()));
 
+// #[allow(clippy::some_unsafe_lint)]
 fn with_app_state<T>(f: impl FnOnce(&mut AppState) -> T) -> T {
     unsafe { f(&mut APP_STATE) }
 }
@@ -123,8 +124,10 @@ impl Api for Todos {
 
     fn update(id: String, change: UpdateTodo) -> AppResult<Todo> {
         with_app_state(|AppState(todos)| {
+            let id = uuid_from(&id)?;
+
             let result = todos
-                .update(&id, &update_todo_from_incoming(change))
+                .update(id, &update_todo_from_incoming(change))
                 .err_as_string()?;
 
             Ok(todo_for_outgoing(result))
@@ -157,14 +160,20 @@ impl Api for Todos {
 
     fn get(id: String) -> AppResult<Todo> {
         with_app_state(|AppState(todos)| {
-            let result = todos.get(&id).err_as_string()?;
+            let id = uuid_from(&id)?;
+
+            let result = todos.get(id).err_as_string()?;
 
             Ok(todo_for_outgoing(result))
         })
     }
 
     fn delete(id: String) -> AppResult<()> {
-        with_app_state(|AppState(todos)| todos.delete(&id).err_as_string())
+        with_app_state(|AppState(todos)| {
+            let id = uuid_from(&id)?;
+
+            todos.delete(id).err_as_string()
+        })
     }
 
     fn delete_done_items() -> AppResult<u64> {

@@ -1,11 +1,12 @@
-use crate::app_error::{
-    AppError, AppResult, IntoReport,
-    ResultExt,
+use crate::{
+    app_error::{
+        AppError, AppResult,
+        IntoReport, ResultExt,
+    },
+    core::UnixTime,
 };
 use chrono::naive::NaiveDateTime;
 use once_cell::sync::Lazy;
-
-pub(crate) type UnixTime = i64;
 
 pub(crate) const USER_DATE_TIME_FORMAT: &str =
     "%Y-%m-%d %H";
@@ -127,7 +128,7 @@ mod tests {
     #[test_case("2022-01-01")]
     #[test_case("abc")]
     #[test_case("2021-02-29 01")]
-    fn unix_time_should_fail_when_input_does_not_match_expected_date_time_format(
+    fn unix_time_should_fail_when_input_does_not_match_expected_date_time_format_or_the_date_is_invalid(
         input: &str,
     ) {
         let deadline =
