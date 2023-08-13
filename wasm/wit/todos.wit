@@ -59,6 +59,13 @@ interface api {
     deadline: option<string>,
   }
 
+  record meta-data {
+    component-version: string,
+    schema-version: u64,
+  }
+
+  meta: func() -> meta-data
+
   add: func(item: new-todo) -> result<todo, string>
 
   update: func(id: string, change: update-todo) -> result<todo, string>

@@ -29,6 +29,7 @@ impl<T> AppResultExt<T>
 
 #[derive(Debug, Kinded)]
 pub enum AppError {
+    CollectionIsEmpty,
     DataConversionU32ToUsize,
     DataConversionUsizeToU64(usize),
     DateTimeParseError {
@@ -53,6 +54,13 @@ impl Display for AppError {
         use AppError::*;
 
         match self {
+            CollectionIsEmpty => {
+                write!(
+                    f,
+                    "[{:?}] Dataset cannot be empty.",
+                    CollectionIsEmpty
+                )
+            },
             DataConversionU32ToUsize => {
                 write!(
                     f,

@@ -6,6 +6,10 @@ use lib::{
 };
 use once_cell::sync::Lazy;
 
+const COMPONENT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+const SCHEMA_VERSION: u64 = 1;
+
 /*
  Unfortunately, I cannot implement the `From` trait because I own neither the
  wit-generated crate (in the target directory) nor the trait (Rust's orphan rule).
@@ -185,6 +189,13 @@ impl Api for Todos {
 
     fn delete_all() -> AppResult<u64> {
         with_app_state(|AppState(todos)| u64_from(todos.delete_all()))
+    }
+
+    fn meta() -> MetaData {
+        MetaData {
+            component_version: COMPONENT_VERSION.into(),
+            schema_version: SCHEMA_VERSION,
+        }
     }
 }
 export!(Todos);

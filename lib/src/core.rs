@@ -2,12 +2,10 @@ use crate::app_error::{
     AppError, AppResultExt, IntoReport,
     ResultExt,
 };
-use nonempty_collections::{
-    NESet, NonEmptyIterator,
-};
+use nonempty_collections::NESet;
 use uuid::Uuid;
 
-// Not used in this crate; only used externally
+// Only used in this mod and by other crates; other modules in this crate use app_error::AppResult.
 pub type AppResult<T> =
     Result<T, String>;
 
@@ -37,29 +35,36 @@ pub fn uuid_from(
         .err_as_string()
 }
 
-pub fn uuid_set_from(
-    targets: &NESet<String>,
-) -> AppResult<NESet<Uuid>> {
-    let (head, tail) =
-        targets.iter().first();
+pub fn uuid_set_from<I>(
+    source: &mut I,
+) -> AppResult<NESet<Uuid>>
+where
+    I: Iterator<Item = String>,
+{
+    if let Some(head) = source.next() {
+        let head = uuid_from(&head)?;
 
-    let head = uuid_from(head)?;
+        let tail: AppResult<_> = source
+            .map(|t| {
+                let id = uuid_from(&t)?;
+                Ok(id)
+            })
+            .collect();
 
-    let tail: AppResult<_> = tail
-        .map(|t| {
-            let id = uuid_from(t)?;
-            Ok(id)
-        })
-        .collect();
-
-    Ok(NESet { head, tail: tail? })
+        Ok(NESet { head, tail: tail? })
+    } else {
+        Err(format!(
+            "{}",
+            AppError::CollectionIsEmpty,
+        ))
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::assert_app_error;
-    use nonempty_collections::nes;
+    use maplit::hashset;
     use pretty_assertions::assert_eq;
     use proptest::prelude::{
         any, prop, proptest, Strategy,
@@ -84,20 +89,78 @@ mod tests {
         );
     }
 
-    #[test]
-    fn uuid_set_from_should_fail_when_uuid_is_not_valid(
-    ) {
-        let invalid_uuid = "not_a_uuid";
+    const REAL_UUID: &str  =
+        "67e55044-10b1-426f-9247-bb680e5fe0c8";
 
-        let actual =
-            uuid_set_from(&nes![
-                "67e55044-10b1-426f-9247-bb680e5fe0c8".to_string(),
-                invalid_uuid.into()
-            ]);
+    const BOGUS_UUID: &str =
+        "not_a_uuid";
+
+    #[test]
+    fn uuid_set_from_should_fail_when_source_hashset_is_empty(
+    ) {
+        let actual = uuid_set_from(
+            &mut hashset! {}
+                .into_iter(),
+        );
+
+        let expected =
+            AppError::CollectionIsEmpty;
+
+        assert_app_error!(
+            actual, expected
+        );
+    }
+
+    #[test]
+    fn uuid_set_from_should_fail_when_source_vec_is_empty(
+    ) {
+        let actual = uuid_set_from(
+            &mut vec![].into_iter(),
+        );
+
+        let expected =
+            AppError::CollectionIsEmpty;
+
+        assert_app_error!(
+            actual, expected
+        );
+    }
+
+    #[test]
+    fn uuid_set_from_should_fail_when_source_hashset_contains_bogus_uuid(
+    ) {
+        let actual = uuid_set_from(
+            &mut hashset! {
+                REAL_UUID.into(),
+                BOGUS_UUID.into()
+            }
+            .into_iter(),
+        );
 
         let expected =
             AppError::InvalidUuid(
-                invalid_uuid.into(),
+                BOGUS_UUID.into(),
+            );
+
+        assert_app_error!(
+            actual, expected
+        );
+    }
+
+    #[test]
+    fn uuid_set_from_should_fail_when_source_vec_contains_bogus_uuid(
+    ) {
+        let actual = uuid_set_from(
+            &mut vec![
+                REAL_UUID.into(),
+                BOGUS_UUID.into(),
+            ]
+            .into_iter(),
+        );
+
+        let expected =
+            AppError::InvalidUuid(
+                BOGUS_UUID.into(),
             );
 
         assert_app_error!(
@@ -126,27 +189,24 @@ mod tests {
 
     proptest! {
         #[test]
-        fn uuid_set_from_should_convert_string_set_to_uuid_set(
+        fn uuid_set_from_should_convert_string_iterator_to_uuid_set(
             uuid_vec in uuid_vec_gen_strategy()
         ) {
-            let string_set: HashSet<_> = uuid_vec
+            let mut strings = uuid_vec
                 .iter()
-                .map(|u| u.to_string())
-                .collect();
+                .map(|u| u.to_string());
 
-            let string_set = NESet::from_set(string_set).expect(
-                "`uuid_vec` should NOT be empty."
-            );
+            let actual = uuid_set_from(&mut strings).unwrap();
 
-            let uuid_set: HashSet<_> = uuid_vec
-                .into_iter()
-                .collect();
+            let expected = {
+                let uuid_set: HashSet<_> = uuid_vec
+                    .into_iter()
+                    .collect();
 
-            let expected = NESet::from_set(uuid_set).expect(
-                "`uuid_vec` should NOT be empty."
-            );
-
-            let actual = uuid_set_from(&string_set).unwrap();
+                NESet::from_set(uuid_set).expect(
+                    "`uuid_vec` should NOT be empty."
+                )
+            };
 
             assert_eq!(actual, expected);
         }
