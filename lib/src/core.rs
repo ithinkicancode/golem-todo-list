@@ -71,29 +71,27 @@ mod tests {
     };
     use std::collections::HashSet;
 
+    const REAL_UUID: &str  =
+        "67e55044-10b1-426f-9247-bb680e5fe0c8";
+
+    const BOGUS_UUID: &str =
+        "not_a_uuid";
+
     #[test]
     fn uuid_from_should_fail_when_uuid_is_not_valid(
     ) {
-        let invalid_uuid = "not_a_uuid";
-
         let actual =
-            uuid_from(invalid_uuid);
+            uuid_from(BOGUS_UUID);
 
         let expected =
             AppError::InvalidUuid(
-                invalid_uuid.into(),
+                BOGUS_UUID.into(),
             );
 
         assert_app_error!(
             actual, expected
         );
     }
-
-    const REAL_UUID: &str  =
-        "67e55044-10b1-426f-9247-bb680e5fe0c8";
-
-    const BOGUS_UUID: &str =
-        "not_a_uuid";
 
     #[test]
     fn uuid_set_from_should_fail_when_source_hashset_is_empty(
