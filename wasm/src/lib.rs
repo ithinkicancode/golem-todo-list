@@ -5,6 +5,7 @@ use lib::{
     todos::{self, OptionalDeadlineInput, OptionalResultLimit, Title, TodoList},
 };
 use once_cell::sync::Lazy;
+use paste::paste;
 
 const COMPONENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -17,45 +18,51 @@ const SCHEMA_VERSION: u64 = 1;
  structs/enums are my APIs.
 */
 
-fn priority_from_incoming(p: Priority) -> todos::Priority {
-    match p {
-        Priority::High => todos::Priority::High,
-        Priority::Medium => todos::Priority::Medium,
-        Priority::Low => todos::Priority::Low,
-    }
+macro_rules! convert_enum_from_incoming {
+    (
+        $wit_enum:ident,
+        $ns:ident :: $internal_enum:ident
+    ) => {
+        paste! {
+            fn [<$wit_enum:lower _from_incoming>](
+                wit_enum: $wit_enum
+            ) -> $ns::$internal_enum {
+                unsafe { std::mem::transmute(wit_enum) }
+            }
+        }
+    };
 }
 
-fn priority_for_outgoing(p: todos::Priority) -> Priority {
-    match p {
-        todos::Priority::High => Priority::High,
-        todos::Priority::Medium => Priority::Medium,
-        todos::Priority::Low => Priority::Low,
-    }
+macro_rules! convert_enum_for_outgoing {
+    (
+        $wit_enum:ident,
+        $ns:ident :: $internal_enum:ident
+    ) => {
+        paste! {
+            fn [<$wit_enum:lower _for_outgoing>](
+                internal_enum: $ns::$internal_enum
+            ) -> $wit_enum {
+                unsafe { std::mem::transmute(internal_enum) }
+            }
+        }
+    };
 }
 
-fn status_from_incoming(s: Status) -> todos::Status {
-    match s {
-        Status::Done => todos::Status::Done,
-        Status::InProgress => todos::Status::InProgress,
-        Status::Backlog => todos::Status::Backlog,
-    }
+macro_rules! convert_enum_both_ways {
+    (
+        $wit_enum:ident,
+        $ns:ident :: $internal_enum:ident
+    ) => {
+        convert_enum_from_incoming!($wit_enum, $ns::$internal_enum);
+
+        convert_enum_for_outgoing!($wit_enum, $ns::$internal_enum);
+    };
 }
 
-fn status_for_outgoing(s: todos::Status) -> Status {
-    match s {
-        todos::Status::Done => Status::Done,
-        todos::Status::InProgress => Status::InProgress,
-        todos::Status::Backlog => Status::Backlog,
-    }
-}
+convert_enum_both_ways!(Priority, todos::Priority);
+convert_enum_both_ways!(Status, todos::Status);
 
-fn query_sort_from_incoming(sort: QuerySort) -> todos::QuerySort {
-    match sort {
-        QuerySort::Deadline => todos::QuerySort::Deadline,
-        QuerySort::Priority => todos::QuerySort::Priority,
-        QuerySort::Status => todos::QuerySort::Status,
-    }
-}
+convert_enum_from_incoming!(QuerySort, todos::QuerySort);
 
 fn new_todo_from_incoming(item: NewTodo) -> todos::NewTodo {
     todos::NewTodo::builder()
@@ -80,7 +87,7 @@ fn query_from_incoming(query: Query) -> todos::Query {
         .priority(query.priority.map(priority_from_incoming))
         .status(query.status.map(status_from_incoming))
         .deadline(OptionalDeadlineInput::new(query.deadline))
-        .sort(query.sort.map(query_sort_from_incoming))
+        .sort(query.sort.map(querysort_from_incoming))
         .limit(OptionalResultLimit::new(query.limit))
         .build()
 }
