@@ -2,7 +2,7 @@ use crate::app_error::{
     AppError, AppResult, IntoReport,
     ResultExt,
 };
-use std::convert::From;
+use derive_more::From;
 
 type Limit = u32;
 
@@ -10,7 +10,7 @@ const QUERY_DEFAULT_LIMIT: Limit = 10;
 
 const QUERY_MAX_LIMIT: Limit = 100;
 
-#[derive(Default)]
+#[derive(Default, From)]
 pub struct OptionalResultLimit(
     Option<Limit>,
 );
@@ -37,17 +37,6 @@ impl OptionalResultLimit {
             .change_context(
                 AppError::DataConversionU32ToUsize,
             )
-    }
-}
-
-// TODO: Implement TryFrom instead.
-impl From<Option<Limit>>
-    for OptionalResultLimit
-{
-    fn from(
-        value: Option<Limit>,
-    ) -> Self {
-        Self(value)
     }
 }
 

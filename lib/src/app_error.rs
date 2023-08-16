@@ -1,8 +1,8 @@
 use error_stack::Context;
-use kinded::Kinded;
 use std::fmt::{
     self, Display, Formatter,
 };
+use strum_macros::EnumDiscriminants;
 use uuid::Uuid;
 
 pub type AppResult<T> =
@@ -27,7 +27,7 @@ impl<T> AppResultExt<T>
     }
 }
 
-#[derive(Debug, Kinded)]
+#[derive(Debug, EnumDiscriminants)]
 pub enum AppError {
     CollectionIsEmpty,
     DataConversionU32ToUsize,
@@ -54,76 +54,78 @@ impl Display for AppError {
         use AppError::*;
 
         match self {
-            CollectionIsEmpty => {
+            e @ CollectionIsEmpty => {
+                let e: AppErrorDiscriminants = e.into();
                 write!(
                     f,
-                    "[{:?}] Dataset cannot be empty.",
-                    CollectionIsEmpty
+                    "[{e:?}] Dataset cannot be empty.",
                 )
             },
-            DataConversionU32ToUsize => {
+            e @ DataConversionU32ToUsize => {
+                let e: AppErrorDiscriminants = e.into();
                 write!(
                     f,
-                    "[{:?}] Error converting u32 to usize.",
-                    DataConversionU32ToUsize,
+                    "[{e:?}] Error converting u32 to usize.",
                 )
             },
-            DataConversionUsizeToU64(n) => {
+            e @ DataConversionUsizeToU64(n) => {
+                let e: AppErrorDiscriminants = e.into();
                 write!(
                     f,
-                    "[{:?}] Error converting {} to unsigned-64.",
-                    AppErrorKind::DataConversionUsizeToU64,
+                    "[{e:?}] Error converting {} to unsigned-64.",
                     n
                 )
             },
-            DateTimeParseError {
+            e @ DateTimeParseError {
                 input,
                 expected_format
             } => {
+                let e: AppErrorDiscriminants = e.into();
                 write!(
                     f,
-                    "[{:?}] '{}' is NOT in the required format of '{}'.",
-                    AppErrorKind::DateTimeParseError,
+                    "[{e:?}] '{}' is NOT in the required format of '{}'.",
                     input,
                     expected_format
                 )
             },
-            EmptyTodoTitle => {
-                write!(f, "[{:?}] Title cannot be empty.", EmptyTodoTitle)
+            e @ EmptyTodoTitle => {
+                let e: AppErrorDiscriminants = e.into();
+
+                write!(f, "[{e:?}] Title cannot be empty.")
             },
-            InvalidUuid(s) => {
+            e @ InvalidUuid(s) => {
+                let e: AppErrorDiscriminants = e.into();
                 write!(
                     f,
-                    "[{:?}] Invalid UUID '{}'.",
-                    AppErrorKind::InvalidUuid,
+                    "[{e:?}] Invalid UUID '{}'.",
                     s
                 )
             },
-            TooLongTodoTitle {
+            e @ TooLongTodoTitle {
                 input,
                 expected_len
             } => {
+                let e: AppErrorDiscriminants = e.into();
                 write!(
                     f,
-                    "[{:?}] The provided title '{}' exceeds max {} characters.",
-                    AppErrorKind::TooLongTodoTitle,
+                    "[{e:?}] The provided title '{}' exceeds max {} characters.",
                     input,
                     expected_len
                 )
             },
-            TodoNotFound(id) => {
+            e @ TodoNotFound(id) => {
+                let e: AppErrorDiscriminants = e.into();
                 write!(
                     f,
-                    "[{:?}] Item with ID '{}' not found.",
-                    AppErrorKind::TodoNotFound,
+                    "[{e:?}] Item with ID '{}' not found.",
                     id
                 )
             },
-            UpdateHasNoChanges => {
+            e @ UpdateHasNoChanges => {
+                let e: AppErrorDiscriminants = e.into();
                 write!(
                     f,
-                    "[{:?}] At least one change must be present.",
-                    UpdateHasNoChanges
+                    "[{e:?}] At least one change must be present.",
                 )
             },
         }

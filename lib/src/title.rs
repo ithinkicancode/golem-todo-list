@@ -1,11 +1,11 @@
 use crate::app_error::{
     bail, AppError, AppResult,
 };
+use derive_more::From;
 use nutype::nutype;
-use std::convert::From;
 
 #[nutype(sanitize(trim))]
-#[derive(Clone)]
+#[derive(Clone, From)]
 pub struct Title(String);
 
 impl Title {
@@ -34,11 +34,5 @@ impl Title {
         } else {
             Ok(title)
         }
-    }
-}
-
-impl From<String> for Title {
-    fn from(value: String) -> Self {
-        Self::new(value)
     }
 }

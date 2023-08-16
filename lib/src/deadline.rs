@@ -6,8 +6,8 @@ use crate::{
     core::UnixTime,
 };
 use chrono::naive::NaiveDateTime;
+use derive_more::From;
 use once_cell::sync::Lazy;
-use std::convert::From;
 
 pub(crate) const USER_DATE_TIME_FORMAT: &str =
     "%Y-%m-%d %H";
@@ -20,7 +20,7 @@ static DATE_TIME_FORMAT: Lazy<String> =
         )
     });
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, From)]
 pub struct OptionalDeadlineInput(
     Option<String>,
 );
@@ -54,17 +54,6 @@ impl OptionalDeadlineInput {
             Ok(unix_time)
         })
         .transpose()
-    }
-}
-
-// TODO: Implement TryFrom instead.
-impl From<Option<String>>
-    for OptionalDeadlineInput
-{
-    fn from(
-        value: Option<String>,
-    ) -> Self {
-        Self(value)
     }
 }
 

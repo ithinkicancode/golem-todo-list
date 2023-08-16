@@ -10,12 +10,12 @@ use crate::{
 };
 use binary_heap_plus::BinaryHeap;
 use chrono::Utc;
-use enum_iterator::Sequence;
 use getset::{CopyGetters, Getters};
 use nonempty_collections::{
     nes, NESet,
 };
 use std::collections::HashMap;
+use strum_macros::EnumIter;
 use typed_builder::TypedBuilder;
 use uuid::Uuid;
 
@@ -37,12 +37,12 @@ macro_rules! unix_time_now {
     Clone,
     Copy,
     Debug,
+    EnumIter,
     Eq,
     PartialEq,
     Hash,
     Ord,
     PartialOrd,
-    Sequence,
 )]
 pub enum Status {
     InProgress,
@@ -54,12 +54,12 @@ pub enum Status {
     Clone,
     Copy,
     Debug,
+    EnumIter,
     Eq,
     PartialEq,
     Hash,
     Ord,
     PartialOrd,
-    Sequence,
 )]
 pub enum Priority {
     Low,
@@ -468,11 +468,11 @@ mod tests {
         assert_app_error,
         deadline::USER_DATE_TIME_FORMAT,
     };
-    use enum_iterator::all;
     use maplit::hashset;
     use memoize::memoize;
     use pretty_assertions::assert_eq;
     use std::collections::HashSet;
+    use strum::IntoEnumIterator;
     use uuid::uuid;
 
     macro_rules! new_todo_list {
@@ -995,7 +995,7 @@ mod tests {
         );
 
         let all_priorities: Vec<_> =
-            all::<Priority>().collect();
+            Priority::iter().collect();
 
         for p in all_priorities {
             let query =
