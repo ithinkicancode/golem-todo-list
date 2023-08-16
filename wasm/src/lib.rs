@@ -2,7 +2,7 @@ use bindings::{export, exports::golem::todos::api::*};
 use lib::{
     app_error::AppResultExt,
     core::{u64_from, uuid_from, AppResult},
-    todos::{self, OptionalDeadlineInput, OptionalResultLimit, Title, TodoList},
+    todos::{self, Title, TodoList},
 };
 use once_cell::sync::Lazy;
 use paste::paste;
@@ -66,9 +66,9 @@ convert_enum_from_incoming!(QuerySort, todos::QuerySort);
 
 fn new_todo_from_incoming(item: NewTodo) -> todos::NewTodo {
     todos::NewTodo::builder()
-        .title(Title::new(item.title))
+        .title(item.title.into())
         .priority(priority_from_incoming(item.priority))
-        .deadline(OptionalDeadlineInput::new(item.deadline))
+        .deadline(item.deadline.into())
         .build()
 }
 
@@ -77,7 +77,7 @@ fn update_todo_from_incoming(item: UpdateTodo) -> todos::UpdateTodo {
         .title(item.title.map(Title::new))
         .priority(item.priority.map(priority_from_incoming))
         .status(item.status.map(status_from_incoming))
-        .deadline(OptionalDeadlineInput::new(item.deadline))
+        .deadline(item.deadline.into())
         .build()
 }
 
@@ -86,9 +86,9 @@ fn query_from_incoming(query: Query) -> todos::Query {
         .keyword(query.keyword)
         .priority(query.priority.map(priority_from_incoming))
         .status(query.status.map(status_from_incoming))
-        .deadline(OptionalDeadlineInput::new(query.deadline))
+        .deadline(query.deadline.into())
         .sort(query.sort.map(querysort_from_incoming))
-        .limit(OptionalResultLimit::new(query.limit))
+        .limit(query.limit.into())
         .build()
 }
 
@@ -97,7 +97,7 @@ fn filter_from_incoming(filter: Filter) -> todos::Query {
         .keyword(filter.keyword)
         .priority(filter.priority.map(priority_from_incoming))
         .status(filter.status.map(status_from_incoming))
-        .deadline(OptionalDeadlineInput::new(filter.deadline))
+        .deadline(filter.deadline.into())
         .build()
 }
 

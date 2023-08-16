@@ -7,6 +7,7 @@ use crate::{
 };
 use chrono::naive::NaiveDateTime;
 use once_cell::sync::Lazy;
+use std::convert::From;
 
 pub(crate) const USER_DATE_TIME_FORMAT: &str =
     "%Y-%m-%d %H";
@@ -25,12 +26,6 @@ pub struct OptionalDeadlineInput(
 );
 
 impl OptionalDeadlineInput {
-    pub fn new(
-        value: Option<String>,
-    ) -> Self {
-        Self(value)
-    }
-
     pub(crate) fn is_some(
         &self,
     ) -> bool {
@@ -59,6 +54,17 @@ impl OptionalDeadlineInput {
             Ok(unix_time)
         })
         .transpose()
+    }
+}
+
+// TODO: Implement TryFrom instead.
+impl From<Option<String>>
+    for OptionalDeadlineInput
+{
+    fn from(
+        value: Option<String>,
+    ) -> Self {
+        Self(value)
     }
 }
 

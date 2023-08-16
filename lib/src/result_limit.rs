@@ -2,6 +2,7 @@ use crate::app_error::{
     AppError, AppResult, IntoReport,
     ResultExt,
 };
+use std::convert::From;
 
 type Limit = u32;
 
@@ -15,12 +16,6 @@ pub struct OptionalResultLimit(
 );
 
 impl OptionalResultLimit {
-    pub fn new(
-        value: Option<Limit>,
-    ) -> Self {
-        Self(value)
-    }
-
     pub(crate) fn validated(
         &self,
     ) -> AppResult<usize> {
@@ -45,6 +40,17 @@ impl OptionalResultLimit {
     }
 }
 
+// TODO: Implement TryFrom instead.
+impl From<Option<Limit>>
+    for OptionalResultLimit
+{
+    fn from(
+        value: Option<Limit>,
+    ) -> Self {
+        Self(value)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -61,12 +67,10 @@ mod tests {
         actual: Option<Limit>,
         expected: Limit,
     ) {
+        let actual: OptionalResultLimit = actual.into();
+
         assert_eq!(
-            OptionalResultLimit::new(
-                actual
-            )
-            .validated()
-            .unwrap(),
+            actual.validated().unwrap(),
             expected as usize,
         )
     }

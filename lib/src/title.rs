@@ -2,6 +2,7 @@ use crate::app_error::{
     bail, AppError, AppResult,
 };
 use nutype::nutype;
+use std::convert::From;
 
 #[nutype(sanitize(trim))]
 #[derive(Clone)]
@@ -9,7 +10,7 @@ pub struct Title(String);
 
 impl Title {
     pub(crate) const MAX_LEN: usize =
-        20;
+        30;
 
     pub(crate) fn validated(
         &self,
@@ -33,5 +34,11 @@ impl Title {
         } else {
             Ok(title)
         }
+    }
+}
+
+impl From<String> for Title {
+    fn from(value: String) -> Self {
+        Self::new(value)
     }
 }
