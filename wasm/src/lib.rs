@@ -6,6 +6,7 @@ use lib::{
 };
 use once_cell::sync::Lazy;
 use paste::paste;
+use std::mem;
 
 const COMPONENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -20,14 +21,14 @@ const SCHEMA_VERSION: u64 = 1;
 
 macro_rules! convert_enum_from_incoming {
     (
-        $wit_enum:ident,
-        $ns:ident :: $internal_enum:ident
+        $wit_enum:ty,
+        $internal_enum:ty
     ) => {
         paste! {
             fn [<$wit_enum:lower _from_incoming>](
                 wit_enum: $wit_enum
-            ) -> $ns::$internal_enum {
-                unsafe { std::mem::transmute(wit_enum) }
+            ) -> $internal_enum {
+                unsafe { mem::transmute(wit_enum) }
             }
         }
     };
@@ -35,14 +36,14 @@ macro_rules! convert_enum_from_incoming {
 
 macro_rules! convert_enum_for_outgoing {
     (
-        $wit_enum:ident,
-        $ns:ident :: $internal_enum:ident
+        $wit_enum:ty,
+        $internal_enum:ty
     ) => {
         paste! {
             fn [<$wit_enum:lower _for_outgoing>](
-                internal_enum: $ns::$internal_enum
+                internal_enum: $internal_enum
             ) -> $wit_enum {
-                unsafe { std::mem::transmute(internal_enum) }
+                unsafe { mem::transmute(internal_enum) }
             }
         }
     };
@@ -50,12 +51,12 @@ macro_rules! convert_enum_for_outgoing {
 
 macro_rules! convert_enum_both_ways {
     (
-        $wit_enum:ident,
-        $ns:ident :: $internal_enum:ident
+        $wit_enum:ty,
+        $internal_enum:ty
     ) => {
-        convert_enum_from_incoming!($wit_enum, $ns::$internal_enum);
+        convert_enum_from_incoming!($wit_enum, $internal_enum);
 
-        convert_enum_for_outgoing!($wit_enum, $ns::$internal_enum);
+        convert_enum_for_outgoing!($wit_enum, $internal_enum);
     };
 }
 
