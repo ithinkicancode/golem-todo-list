@@ -21,14 +21,14 @@ const SCHEMA_VERSION: u64 = 1;
 
 macro_rules! convert_enum_from_incoming {
     (
-        $wit_enum:ty,
-        $internal_enum:ty
+        $the_enum:ty,
+        $internal:ident
     ) => {
         paste! {
-            fn [<$wit_enum:lower _from_incoming>](
-                wit_enum: $wit_enum
-            ) -> $internal_enum {
-                unsafe { mem::transmute(wit_enum) }
+            fn [<$the_enum:lower _from_incoming>](
+                the_enum: $the_enum
+            ) -> $internal::$the_enum {
+                unsafe { mem::transmute(the_enum) }
             }
         }
     };
@@ -36,14 +36,14 @@ macro_rules! convert_enum_from_incoming {
 
 macro_rules! convert_enum_for_outgoing {
     (
-        $wit_enum:ty,
-        $internal_enum:ty
+        $the_enum:ty,
+        $internal:ident
     ) => {
         paste! {
-            fn [<$wit_enum:lower _for_outgoing>](
-                internal_enum: $internal_enum
-            ) -> $wit_enum {
-                unsafe { mem::transmute(internal_enum) }
+            fn [<$the_enum:lower _for_outgoing>](
+                the_enum: $internal::$the_enum
+            ) -> $the_enum {
+                unsafe { mem::transmute(the_enum) }
             }
         }
     };
@@ -51,19 +51,19 @@ macro_rules! convert_enum_for_outgoing {
 
 macro_rules! convert_enum_both_ways {
     (
-        $wit_enum:ty,
-        $internal_enum:ty
+        $the_enum:ty,
+        $internal:ident
     ) => {
-        convert_enum_from_incoming!($wit_enum, $internal_enum);
+        convert_enum_from_incoming!($the_enum, $internal);
 
-        convert_enum_for_outgoing!($wit_enum, $internal_enum);
+        convert_enum_for_outgoing!($the_enum, $internal);
     };
 }
 
-convert_enum_both_ways!(Priority, todos::Priority);
-convert_enum_both_ways!(Status, todos::Status);
+convert_enum_both_ways!(Priority, todos);
+convert_enum_both_ways!(Status, todos);
 
-convert_enum_from_incoming!(QuerySort, todos::QuerySort);
+convert_enum_from_incoming!(QuerySort, todos);
 
 fn new_todo_from_incoming(item: NewTodo) -> todos::NewTodo {
     todos::NewTodo::builder()
