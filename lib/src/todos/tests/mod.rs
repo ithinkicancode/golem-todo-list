@@ -535,7 +535,6 @@ mod tests {
         );
 
         let all_priorities: Vec<_> =
-            // all::<Priority>().collect();
             Priority::iter().collect();
 
         for p in all_priorities {
