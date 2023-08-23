@@ -7,7 +7,7 @@ edition = "2021"
 binary-heap-plus = "~0.5.0"
 chrono = "~0.4.26"
 derive_more = { version = "~0.99.17", features = ["from"] }
-error-stack = "~0.3.1"
+error-stack = "~0.4.0"
 getset = "~0.1.2"
 nonempty-collections = "~0.1.1"
 nutype = "~0.3.1"

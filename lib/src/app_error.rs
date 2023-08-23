@@ -1,16 +1,17 @@
-use error_stack::Context;
 use std::fmt::{
     self, Display, Formatter,
 };
 use strum_macros::EnumDiscriminants;
 use uuid::Uuid;
 
-pub type AppResult<T> =
-    error_stack::Result<T, AppError>;
-
 pub use error_stack::{
-    bail, report, IntoReport, ResultExt,
+    bail, report, Context, Report,
+    Result as ErrorStackResult,
+    ResultExt,
 };
+
+pub type AppResult<T> =
+    ErrorStackResult<T, AppError>;
 
 pub trait AppResultExt<T> {
     fn err_as_string(

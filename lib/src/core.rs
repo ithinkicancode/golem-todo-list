@@ -1,6 +1,5 @@
 use crate::app_error::{
-    AppError, AppResultExt, IntoReport,
-    ResultExt,
+    AppError, AppResultExt, ResultExt,
 };
 use nonempty_collections::NESet;
 use uuid::Uuid;
@@ -15,7 +14,6 @@ pub fn u64_from(
     n: usize,
 ) -> AppResult<u64> {
     u64::try_from(n)
-        .into_report()
         .change_context(
             AppError::DataConversionUsizeToU64(n),
         )
@@ -26,7 +24,6 @@ pub fn uuid_from(
     s: &str,
 ) -> AppResult<Uuid> {
     Uuid::try_from(s.trim())
-        .into_report()
         .change_context(
             AppError::InvalidUuid(
                 s.into(),

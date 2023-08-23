@@ -1,5 +1,5 @@
 use crate::app_error::{
-    AppError, AppResult, IntoReport,
+    AppError, AppResult, Report,
     ResultExt,
 };
 use derive_more::From;
@@ -33,7 +33,7 @@ impl OptionalResultLimit {
                 QUERY_DEFAULT_LIMIT,
             )
             .try_into()
-            .into_report()
+            .map_err(Report::from)
             .change_context(
                 AppError::DataConversionU32ToUsize,
             )

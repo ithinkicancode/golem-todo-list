@@ -1,7 +1,6 @@
 use crate::{
     app_error::{
-        AppError, AppResult,
-        IntoReport, ResultExt,
+        AppError, AppResult, ResultExt,
     },
     core::UnixTime,
 };
@@ -42,7 +41,6 @@ impl OptionalDeadlineInput {
                     &format!("{}:00:00", s.trim()),
                     &DATE_TIME_FORMAT
                 )
-                .into_report()
                 .change_context(
                     AppError::DateTimeParseError {
                         input: s.into(),
