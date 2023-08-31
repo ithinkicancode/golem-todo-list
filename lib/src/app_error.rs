@@ -31,20 +31,35 @@ impl<T> AppResultExt<T>
 #[derive(Debug, EnumDiscriminants)]
 pub enum AppError {
     CollectionIsEmpty,
+
     DataConversionU32ToUsize,
+
     DataConversionUsizeToU64(usize),
+
     DateTimeParseError {
         input: String,
         expected_format: String,
     },
+
     EmptyTodoTitle,
+
     InvalidUuid(String),
+
     TooLongTodoTitle {
         input: String,
         expected_len: usize,
     },
+
     TodoNotFound(Uuid),
+
     UpdateHasNoChanges,
+}
+impl AppError {
+    fn kind(
+        &self,
+    ) -> AppErrorDiscriminants {
+        self.into()
+    }
 }
 
 impl Display for AppError {
@@ -52,81 +67,83 @@ impl Display for AppError {
         &self,
         f: &mut Formatter,
     ) -> fmt::Result {
-        use AppError::*;
+        use AppError as E;
 
         match self {
-            e @ CollectionIsEmpty => {
-                let e: AppErrorDiscriminants = e.into();
+            e @ E::CollectionIsEmpty => {
                 write!(
                     f,
-                    "[{e:?}] Dataset cannot be empty.",
+                    "[{:?}] Dataset cannot be empty.",
+                    e.kind()
                 )
             },
-            e @ DataConversionU32ToUsize => {
-                let e: AppErrorDiscriminants = e.into();
+            e @ E::DataConversionU32ToUsize => {
                 write!(
                     f,
-                    "[{e:?}] Error converting u32 to usize.",
+                    "[{:?}] Error converting u32 to usize.",
+                    e.kind()
                 )
             },
-            e @ DataConversionUsizeToU64(n) => {
-                let e: AppErrorDiscriminants = e.into();
+            e @ E::DataConversionUsizeToU64(n) => {
                 write!(
                     f,
-                    "[{e:?}] Error converting {} to unsigned-64.",
+                    "[{:?}] Error converting {} to unsigned-64.",
+                    e.kind(),
                     n
                 )
             },
-            e @ DateTimeParseError {
+            e @ E::DateTimeParseError {
                 input,
                 expected_format
             } => {
-                let e: AppErrorDiscriminants = e.into();
                 write!(
                     f,
-                    "[{e:?}] '{}' is NOT in the required format of '{}'.",
+                    "[{:?}] '{}' is NOT in the required format of '{}'.",
+                    e.kind(),
                     input,
                     expected_format
                 )
             },
-            e @ EmptyTodoTitle => {
-                let e: AppErrorDiscriminants = e.into();
-
-                write!(f, "[{e:?}] Title cannot be empty.")
-            },
-            e @ InvalidUuid(s) => {
-                let e: AppErrorDiscriminants = e.into();
+            e @ E::EmptyTodoTitle => {
                 write!(
                     f,
-                    "[{e:?}] Invalid UUID '{}'.",
+                    "[{:?}] Title cannot be empty.",
+                    e.kind()
+                )
+            },
+            e @ E::InvalidUuid(s) => {
+                write!(
+                    f,
+                    "[{:?}] Invalid UUID '{}'.",
+                    e.kind(),
                     s
                 )
             },
-            e @ TooLongTodoTitle {
+            e @ E::TooLongTodoTitle {
                 input,
                 expected_len
             } => {
-                let e: AppErrorDiscriminants = e.into();
                 write!(
                     f,
-                    "[{e:?}] The provided title '{}' exceeds max {} characters.",
+                    "[{:?}] The provided title '{}' exceeds max {} characters.",
+                    e.kind(),
                     input,
                     expected_len
                 )
             },
-            e @ TodoNotFound(id) => {
-                let e: AppErrorDiscriminants = e.into();
+            e @ E::TodoNotFound(id) => {
                 write!(
                     f,
-                    "[{e:?}] Item with ID '{}' not found.",
+                    "[{:?}] Item with ID '{}' not found.",
+                    e.kind(),
                     id
                 )
             },
-            e @ UpdateHasNoChanges => {
-                let e: AppErrorDiscriminants = e.into();
+            e @ E::UpdateHasNoChanges => {
                 write!(
                     f,
-                    "[{e:?}] At least one change must be present.",
+                    "[{:?}] At least one change must be present.",
+                    e.kind()
                 )
             },
         }
